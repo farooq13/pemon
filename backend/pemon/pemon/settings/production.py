@@ -1,11 +1,21 @@
-"""
-Production-specific settings for Pemon Fintech Platform.
-
-These settings are used in production environments.
-Security and performance are prioritized.
-"""
-
 from .base import *
+
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('DATABASE_NAME'),
+        'USER': config('DATABASE_USER'),
+        'PASSWORD': config('DATABASE_PASSWORD'),
+        'HOST': config('DATABASE_HOST', default='localhost'),
+        'PORT': config('DATABASE_PORT', default='5432'),
+        'ATOMIC_REQUESTS': True,  # Wrap each request in a transaction
+        'CONN_MAX_AGE': 600,  # Connection pooling (10 minutes)
+        'OPTIONS': {
+            'connect_timeout': 10,
+        },
+    }
+}
 
 
 # SECURITY SETTINGS
@@ -68,13 +78,10 @@ EMAIL_PORT = config('EMAIL_PORT', cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='fidbyte@gmail.com')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='fidbyte@gamil.com')
 SERVER_EMAIL = config('SERVER_EMAIL', default='fidbyte@gmail.com')
 
 
-# CACHING - Production (Use Redis)
-
-# Cache configuration is already set in base.py using Redis
 
 
 # LOGGING - Production
@@ -93,7 +100,6 @@ LOGGING['handlers']['mail_admins'] = {
 }
 
 LOGGING['loggers']['django.request']['handlers'].append('mail_admins')
-
 
 
 # SENTRY MONITORING - Production
@@ -117,6 +123,7 @@ if SENTRY_DSN:
     )
 
 
+
 # CELERY - Production
 
 # Use more workers in production
@@ -129,7 +136,6 @@ CELERY_TASK_COMPRESSION = 'gzip'
 
 
 # REST FRAMEWORK - Production
-
 REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'] = (
     'rest_framework.renderers.JSONRenderer',
     # Browsable API disabled in production
@@ -148,6 +154,5 @@ REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
 
 
 # CORS - Production (Restrict origins)
-
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=Csv())
