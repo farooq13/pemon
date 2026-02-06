@@ -1,5 +1,4 @@
-mport uuid
-
+import uuid
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.core.validators import RegexValidator
 from django.db import models
