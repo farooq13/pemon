@@ -191,7 +191,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     """
     
     full_name = serializers.CharField(source='get_full_name', read_only=True)
-    is_verified = serializers.BooleanField(source='is_verified', read_only=True)
+    is_verified = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = User

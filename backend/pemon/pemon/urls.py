@@ -27,7 +27,7 @@ def health_check(request):
     return Response({
         'status': 'healthy',
         'version': '1.0.0',
-        'service': 'Pemon API',
+        'service': 'Pemon Fintech API',
     }, status=status.HTTP_200_OK)
 
 
@@ -77,7 +77,6 @@ def readiness_check(request):
 
 
 # URL PATTERNS
-
 urlpatterns = [
     # ADMIN INTERFACE
     path('admin/', admin.site.urls),
@@ -92,7 +91,7 @@ urlpatterns = [
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     
     # API v1 ENDPOINTS
-    path('api/v1/auth/', include('accounts.urls')),
+    path('api/v1/auth/', include('accounts.urls', namespace='accounts')),
     # path('api/v1/kyc/', include('kyc.urls')),  # Uncomment when kyc.urls is created
     # path('api/v1/wallet/', include('wallets.urls')),  # Uncomment when wallets.urls is created
     # path('api/v1/transactions/', include('transactions.urls')),  # Uncomment when transactions.urls is created
@@ -100,7 +99,6 @@ urlpatterns = [
 ]
 
 # ADMIN SITE CUSTOMIZATION
-
 admin.site.site_header = 'Pemon Administration'
 admin.site.site_title = 'Pemon Admin Portal'
 admin.site.index_title = 'Welcome to Pemon Administration'
