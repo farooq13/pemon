@@ -38,8 +38,8 @@ INSTALLED_APPS = [
     'drf_spectacular',
 
     # Local
-    "core",
-    "api",
+    'core',
+    'api',
     'accounts',
     'kyc.apps',
     'wallets',
