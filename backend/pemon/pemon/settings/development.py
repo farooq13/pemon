@@ -1,15 +1,19 @@
 from .base import *
+import sys
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
 
-INSTALLED_APPS += [
-    'debug_toolbar',  # Django Debug Toolbar for performance profiling
-]
+# Avoid installing the Django Debug Toolbar when running tests
+RUNNING_TESTS = 'test' in sys.argv
 
+if not RUNNING_TESTS:
+    INSTALLED_APPS += [
+        'debug_toolbar',  # Django Debug Toolbar for performance profiling
+    ]
 
-MIDDLEWARE += [
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
-]
+    MIDDLEWARE += [
+        'debug_toolbar.middleware.DebugToolbarMiddleware',
+    ]
 
 # DEBUG TOOLBAR CONFIGURATION
 
