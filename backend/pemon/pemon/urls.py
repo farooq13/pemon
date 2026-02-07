@@ -92,7 +92,7 @@ urlpatterns = [
     
     # API v1 ENDPOINTS
     path('api/v1/auth/', include('accounts.urls', namespace='accounts')),
-    # path('api/v1/kyc/', include('kyc.urls')),  # Uncomment when kyc.urls is created
+    path('api/v1/kyc/', include('kyc.urls')),
     # path('api/v1/wallet/', include('wallets.urls')),  # Uncomment when wallets.urls is created
     # path('api/v1/transactions/', include('transactions.urls')),  # Uncomment when transactions.urls is created
     

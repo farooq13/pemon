@@ -6,6 +6,7 @@ import PrivateRoute from './components/PrivateRoute';
 import Register from './pages/Register';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
+import KYC from './pages/KYC';
 
 function App() {
   return (
@@ -23,6 +24,15 @@ function App() {
             element={
               <PrivateRoute>
                 <Dashboard />
+              </PrivateRoute>
+            }
+          />
+          
+          <Route
+            path="/kyc"
+            element={
+              <PrivateRoute>
+                <KYC />
               </PrivateRoute>
             }
           />

@@ -42,7 +42,7 @@ INSTALLED_APPS = [
     'core',
     'api',
     'accounts',
-    'kyc.apps',
+    'kyc',
     'wallets',
     'transactions',
 ]
