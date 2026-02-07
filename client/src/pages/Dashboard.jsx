@@ -157,7 +157,7 @@ const Dashboard = () => {
             {!user?.email_verified && (
               <div className="mt-8">
                 <button className="px-6 py-3 bg-blue-600 hover:bg-blue-700 hover:cursor-pointer text-white font-medium rounded-lg transition">
-                  Verify Email Now
+                  Verify Email Now 
                 </button>
               </div>
             )}
