@@ -63,11 +63,18 @@ class KYCService:
         # Handle file uploads
         if id_document:
             kyc.id_document = id_document
-        
+
         if selfie:
             kyc.selfie = selfie
-        
-        # Mark as submitted
+
+        # Persist all updated fields (text fields and files) before marking submitted
+        update_fields = [
+            'bvn', 'nin', 'date_of_birth', 'address', 'city', 'state',
+            'id_type', 'id_number', 'id_document', 'selfie', 'updated_at'
+        ]
+        kyc.save(update_fields=update_fields)
+
+        # Mark as submitted (will set status and submitted_at)
         kyc.submit()
         
         logger.info(f'KYC submitted for user {user.email}')

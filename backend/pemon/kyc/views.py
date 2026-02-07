@@ -34,7 +34,21 @@ class KYCSubmissionView(generics.CreateAPIView):
         """Handle KYC submission."""
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        kyc = serializer.save()
+        
+        try:
+            kyc = serializer.save()
+        except ValueError as e:
+            # Catch business logic errors from services and return 400
+            return Response(
+                {
+                    'detail': str(e),
+                    'error': {
+                        'message': str(e),
+                        'code': 'kyc_submission_error',
+                    }
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         return Response(
             {
