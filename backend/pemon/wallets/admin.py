@@ -116,8 +116,7 @@ class WalletAdmin(admin.ModelAdmin):
     
     def transaction_count(self, obj):
         """Display count of transactions associated with this wallet."""
-        # Assuming transactions have a foreign key to wallet
-        # Adjust based on your transaction model
+       
         try:
             count = obj.transactions_sent.count() + obj.transactions_received.count()
             return f"{count} transactions"
