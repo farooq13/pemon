@@ -1,16 +1,4 @@
 from django.test import TestCase
-
-# Create your tests here.
-"""
-Wallet Tests
-
-Comprehensive test suite for wallet functionality including:
-- Wallet creation
-- Balance retrieval
-- Freeze/unfreeze operations
-- Signal handlers
-"""
-
 from decimal import Decimal
 from django.test import TestCase
 from django.contrib.auth import get_user_model
