@@ -1,177 +1,219 @@
-import { useEffect, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import KYCStatus from '../components/KYCStatus';
+import walletService from '../services/walletService';
+import kycService from '../services/kycService';
+import BalanceCard from '../components/wallet/BalanceCard';
+import QuickActions from '../components/wallet/QuickActions';
+
 
 const Dashboard = () => {
-  const { user, logout } = useAuth();
-  const location = useLocation();
-  const [showMessage, setShowMessage] = useState(false);
-  const message = location.state?.message;
+  const { user } = useAuth();
 
+  const [walletData, setWalletData] = useState(null);
+  const [kycStatus, setKycStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  /*
+    Fetch wallet and KYC data on component mount
+   */
   useEffect(() => {
-    if (message) {
-      setShowMessage(true);
-      // Auto-hide message after 5 seconds
-      const timer = setTimeout(() => setShowMessage(false), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [message]);
+    fetchDashboardData();
+  }, []);
 
-  const handleLogout = async () => {
-    await logout();
-    window.location.href = '/login';
+  /*
+    Fetch all dashboard data
+   */
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      // Fetch wallet balance and KYC status in parallel
+      const [wallet, kyc] = await Promise.all([
+        walletService.getBalance().catch(() => null),
+        kycService.getStatus().catch(() => null),
+      ]);
+
+      setWalletData(wallet);
+      setKycStatus(kyc);
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError('Failed to load dashboard data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Refresh wallet balance
+   */
+  const refreshBalance = async () => {
+    try {
+      const wallet = await walletService.getBalance();
+      setWalletData(wallet);
+    } catch (err) {
+      console.error('Error refreshing balance:', err);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div className="flex items-center">
-            <h1 className="text-2xl font-bold text-blue-600">Pemon</h1>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-700">
-              {user?.full_name || user?.email}
-            </span>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-red-500 hover:text-white transition hover:cursor-pointer"
-            >
-              Logout
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+              <p className="text-gray-600 mt-1">
+                Welcome back, {user?.email || 'User'}!
+              </p>
+            </div>
+
+            {/* Notification Bell (Placeholder) */}
+            <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              {/* Notification badge */}
+              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* Success Message */}
-      {showMessage && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start">
-            <svg className="w-5 h-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            <p className="text-sm text-green-700">{message}</p>
-          </div>
-        </div>
-      )}
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Welcome Card */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow p-8">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                  Welcome to Pemon! 
-                </h2>
-                <p className="text-gray-600 mb-6">
-                  Your account has been created successfully.
-                </p>
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+            <svg className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="text-red-600 font-medium">{error}</p>
+              <button
+                onClick={fetchDashboardData}
+                className="text-red-700 text-sm underline mt-1"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        )}
 
-                {/* User Info Card */}
-                <div className="max-w-md mx-auto bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-white shadow-lg">
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm opacity-90">Account Details</span>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      user?.email_verified ? 'bg-green-500' : 'bg-yellow-500'
-                    }`}>
-                      {user?.email_verified ? '✓ Verified' : ' Pending Verification'}
-                    </span>
-                  </div>
-                  
-                  <div className="space-y-3 text-left">
-                    <div>
-                      <p className="text-xs opacity-75">Name</p>
-                      <p className="font-medium">{user?.full_name}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs opacity-75">Email</p>
-                      <p className="font-medium">{user?.email}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs opacity-75">Phone</p>
-                      <p className="font-medium">{user?.phone_number}</p>
-                    </div>
-                  </div>
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Balance & Actions */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Balance Card */}
+            <BalanceCard
+              walletData={walletData}
+              loading={loading}
+              onRefresh={refreshBalance}
+            />
 
-                {/* Next Steps */}
-                <div className="mt-8 text-left max-w-md mx-auto">
-                  <h3 className="font-semibold text-gray-900 mb-4">Next Steps:</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-start">
-                      <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
-                        user?.email_verified ? 'bg-green-500' : 'bg-gray-300'
-                      }`}>
-                        {user?.email_verified ? (
-                          <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        ) : (
-                          <span className="text-xs text-gray-600">1</span>
-                        )}
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">Verify your email</p>
-                        <p className="text-xs text-gray-500">Check your inbox for verification code</p>
-                      </div>
-                    </div>
+            {/* Quick Actions */}
+            <QuickActions walletData={walletData} />
 
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
-                        <span className="text-xs text-gray-600">2</span>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">Complete KYC verification</p>
-                        <p className="text-xs text-gray-500">Verify your identity to unlock features</p>
-                      </div>
-                    </div>
+            {/* Recent Transactions Preview (Placeholder) */}
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-gray-900">Recent Transactions</h3>
+                <button className="text-blue-600 hover:text-blue-700 hover:cursor-pointer text-sm font-medium">
+                  View all →
+                </button>
+              </div>
 
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
-                        <span className="text-xs text-gray-600">3</span>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">Create your wallet</p>
-                        <p className="text-xs text-gray-500">Coming in Sprint 3</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-start">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full bg-gray-300 flex items-center justify-center">
-                        <span className="text-xs text-gray-600">4</span>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">Start transacting</p>
-                        <p className="text-xs text-gray-500">Send money, pay bills, and more</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* CTA Button */}
-                {!user?.email_verified && (
-                  <div className="mt-8">
-                    <button className="px-6 py-3 bg-blue-600 hover:bg-blue-700 hover:cursor-pointer text-white font-medium rounded-lg transition">
-                      Verify Email Now 
-                    </button>
-                  </div>
-                )}
+              {/* Empty state or loading */}
+              <div className="text-center py-8 text-gray-500">
+                <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <p>No recent transactions</p>
+                <p className="text-sm mt-1">Your transactions will appear here</p>
               </div>
             </div>
           </div>
 
-          {/* Right Column - KYC Status */}
-          <div>
-            <KYCStatus />
+          {/* Right Column - KYC Status & Info */}
+          <div className="space-y-6">
+            {/* KYC Status Widget */}
+            <div className="bg-white rounded-2xl shadow-lg p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">KYC Status</h3>
+
+              {loading ? (
+                <div className="animate-pulse space-y-3">
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              ) : kycStatus ? (
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-gray-700">Verification Tier</span>
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                      kycStatus.tier === 3 ? 'bg-green-100 text-green-800' :
+                      kycStatus.tier === 2 ? 'bg-purple-100 text-purple-800' :
+                      kycStatus.tier === 1 ? 'bg-blue-100 text-blue-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      Tier {kycStatus.tier}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-gray-700">Status</span>
+                    <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                      kycStatus.status === 'approved' ? 'bg-green-100 text-green-800' :
+                      kycStatus.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                      kycStatus.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {kycStatus.status_display || kycStatus.status}
+                    </span>
+                  </div>
+
+                  {kycStatus.limits && (
+                    <div className="pt-4 border-t border-gray-200">
+                      <p className="text-sm text-gray-600 mb-2">Transaction Limits</p>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Daily:</span>
+                          <span className="font-medium">{kycStatus.limits.daily_limit_formatted || '₦0'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Per Transaction:</span>
+                          <span className="font-medium">{kycStatus.limits.single_transaction_limit_formatted || '₦0'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {kycStatus.can_upgrade?.can_upgrade && (
+                    <button className="mt-4 w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg transition">
+                      Upgrade to Tier {kycStatus.can_upgrade.next_tier?.tier || (kycStatus.tier + 1)}
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-gray-600 mb-4">Complete KYC to unlock full features</p>
+                  <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition">
+                    Start KYC
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Help & Support */}
+            <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-2xl shadow-lg p-6 border border-purple-100">
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Need Help?</h3>
+              <p className="text-gray-700 text-sm mb-4">
+                Our support team is available 24/7 to assist you.
+              </p>
+              <button className="w-full bg-white hover:bg-gray-50 text-gray-900 font-medium py-2 rounded-lg transition border border-gray-200">
+                Contact Support
+              </button>
+            </div>
           </div>
         </div>
       </main>
