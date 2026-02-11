@@ -7,7 +7,7 @@ from rest_framework.views import APIView
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.pagination import PageNumberPagination
 from django.db.models import Q, Sum, Count
 from django.utils import timezone
@@ -18,6 +18,15 @@ from .serializers import (
     TransactionDetailSerializer,
     TransactionStatsSerializer
 )
+
+from django.http import HttpResponse, FileResponse
+from rest_framework.decorators import api_view, permission_classes
+from django.shortcuts import get_object_or_404
+from django.db import transaction as db_transaction
+
+from transactions.models import Transaction
+from transactions.services import LedgerService
+from transactions.receipts import generate_transaction_receipt, generate_receipt_html
 
 logger = logging.getLogger(__name__)
 
@@ -330,3 +339,144 @@ def transaction_summary(request):
             'current_balance_formatted': f"₦{wallet.balance:,.2f}"
         }
     })
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def download_receipt(request, transaction_id):
+    """
+    GET /api/transactions/<id>/receipt/
+    
+    Download transaction receipt as PDF.
+    
+    Query Parameters:
+        format: 'pdf' (default) or 'html'
+    
+    Returns:
+        200: PDF or HTML receipt
+        403: User not authorized
+        404: Transaction not found
+    """
+    # Get transaction
+    txn = get_object_or_404(
+        Transaction.objects.select_related('user', 'recipient'),
+        id=transaction_id
+    )
+    
+    # Check authorization - user must be sender or recipient
+    if txn.user != request.user and txn.recipient != request.user:
+        return Response({
+            'status': 'error',
+            'message': 'You are not authorized to view this receipt'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    # Get format
+    format_type = request.query_params.get('format', 'pdf').lower()
+    
+    if format_type == 'html':
+        # Return HTML receipt
+        html_content = generate_receipt_html(txn)
+        return HttpResponse(html_content, content_type='text/html')
+    
+    else:
+        # Generate PDF receipt
+        pdf_buffer = generate_transaction_receipt(txn)
+        
+        # Return PDF as download
+        response = FileResponse(
+            pdf_buffer,
+            as_attachment=True,
+            filename=f'receipt_{txn.reference}.pdf',
+            content_type='application/pdf'
+        )
+        
+        logger.info(
+            f"Receipt downloaded for transaction {txn.reference} by user {request.user.id}"
+        )
+        
+        return response
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+@db_transaction.atomic
+def reverse_transaction(request, transaction_id):
+    """
+    POST /api/transactions/<id>/reverse/
+    
+    Reverse a completed transaction (Admin only).
+    
+    Request Body:
+        {
+            "reason": "Customer request for refund"
+        }
+    
+    Returns:
+        200: Reversal successful with new transaction details
+        400: Transaction cannot be reversed
+        403: Not authorized
+        404: Transaction not found
+    """
+    # Get transaction
+    txn = get_object_or_404(Transaction, id=transaction_id)
+    
+    # Get reversal reason
+    reason = request.data.get('reason', 'Admin reversal')
+    
+    # Validate transaction can be reversed
+    if not txn.can_be_reversed:
+        return Response({
+            'status': 'error',
+            'message': f'Transaction cannot be reversed. Status: {txn.status}',
+            'can_reverse': False,
+            'details': {
+                'current_status': txn.status,
+                'already_reversed': txn.is_reversed,
+                'transaction_type': txn.transaction_type
+            }
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        # Perform reversal
+        reversal_txn = LedgerService.reverse_transaction(
+            original_txn=txn,
+            reversed_by_user=request.user,
+            reason=reason
+        )
+        
+        logger.warning(
+            f"Transaction {txn.reference} reversed by admin {request.user.email}. "
+            f"Reversal ref: {reversal_txn.reference}, Reason: {reason}"
+        )
+        
+        return Response({
+            'status': 'success',
+            'message': 'Transaction reversed successfully',
+            'data': {
+                'original_transaction': {
+                    'id': str(txn.id),
+                    'reference': txn.reference,
+                    'amount': str(txn.amount),
+                    'status': txn.status
+                },
+                'reversal_transaction': {
+                    'id': str(reversal_txn.id),
+                    'reference': reversal_txn.reference,
+                    'amount': str(reversal_txn.amount),
+                    'status': reversal_txn.status,
+                    'created_at': reversal_txn.created_at.isoformat()
+                },
+                'reason': reason
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        logger.error(
+            f"Failed to reverse transaction {txn.reference}: {str(e)}",
+            exc_info=True
+        )
+        
+        return Response({
+            'status': 'error',
+            'message': 'Reversal failed. Please try again.',
+            'error_details': str(e) if request.user.is_staff else None
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
