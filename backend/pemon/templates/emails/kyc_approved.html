@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KYC Approved - Pemon</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+
+    .container {
+      background-color: #ffffff;
+      border-radius: 8px;
+      padding: 40px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .logo {
+      font-size: 32px;
+      font-weight: bold;
+      color: #0066FF;
+      margin-bottom: 10px;
+    }
+
+    .success-icon {
+      width: 80px;
+      height: 80px;
+      background-color: #00D68F;
+      border-radius: 50%;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 48px;
+      color: white;
+    }
+
+    h1 {
+      color: #1a1a1a;
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+
+    .tier-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #0066FF 0%, #00D68F 100%);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-weight: 600;
+      margin: 20px 0;
+    }
+
+    .limits-box {
+      background-color: #f8f9fa;
+      border-left: 4px solid #0066FF;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 4px;
+    }
+
+    .limit-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #e9ecef;
+    }
+
+    .limit-item:last-child {
+      border-bottom: none;
+    }
+
+    .limit-label {
+      font-weight: 500;
+      color: #6c757d;
+    }
+
+    .limit-value {
+      font-weight: 600;
+      color: #0066FF;
+    }
+
+    .cta-button {
+      display: inline-block;
+      background-color: #0066FF;
+      color: white;
+      padding: 14px 32px;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 600;
+      margin: 20px 0;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      padding-top: 20px;
+      border-top: 1px solid #e9ecef;
+      color: #6c757d;
+      font-size: 14px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">Pemon</div>
+      <div class="success-icon">✓</div>
+    </div>
+
+    <h1>Congratulations, {{ user_name }}!</h1>
+
+    <p>We're excited to inform you that your KYC verification has been <strong>approved</strong>!</p>
+
+    <div style="text-align: center;">
+      <div class="tier-badge">
+        {{ tier_name }} - Tier {{ tier }}
+      </div>
+    </div>
+
+    <p>You can now enjoy the following benefits:</p>
+
+    <div class="limits-box">
+      <h3 style="margin-top: 0; color: #1a1a1a;">Your Transaction Limits</h3>
+      <div class="limit-item">
+        <span class="limit-label">Daily Limit:</span>
+        <span class="limit-value">₦{{ daily_limit|floatformat:2 }}</span>
+      </div>
+      <div class="limit-item">
+        <span class="limit-label">Single Transaction:</span>
+        <span class="limit-value">₦10,000.00</span>
+      </div>
+      <div class="limit-item">
+        <span class="limit-label">Wallet Balance:</span>
+        <span class="limit-value">₦100,000.00</span>
+      </div>
+    </div>
+
+    <p><strong>What you can do now:</strong></p>
+    <ul>
+      <li>Send and receive money</li>
+      <li>Pay bills (airtime, data, electricity, cable TV)</li>
+      <li>Create savings plans</li>
+      <li>View detailed transaction history</li>
+    </ul>
+
+    <div style="text-align: center;">
+      <a href="https://pemon/dashboard" class="cta-button">Go to Dashboard</a>
+    </div>
+
+    <p style="margin-top: 30px; color: #6c757d; font-size: 14px;">
+      <strong>Want higher limits?</strong> Upgrade to Tier 2 or Tier 3 for increased transaction limits and additional
+      features.
+    </p>
+
+    <div class="footer">
+      <p>Thank you for choosing Pemon!</p>
+      <p>If you have any questions, contact us at <a href="mailto:fidbyte@gmail.com">fidbyte@gmail.com</a></p>
+      <p style="margin-top: 20px; font-size: 12px; color: #adb5bd;">
+        © 2024 Pemon. All rights reserved.
+      </p>
+    </div>
+  </div>
+</body>
+
+</html>
