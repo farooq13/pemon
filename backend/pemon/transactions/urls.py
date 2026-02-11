@@ -5,7 +5,8 @@ from .views import (
     transaction_stats,
     transaction_summary,
     download_receipt,
-    reverse_transaction
+    reverse_transaction,
+    export_transactions,
 )
 app_name = 'transactions'
 
@@ -21,4 +22,7 @@ urlpatterns = [
     path('<uuid:transaction_id>/receipt/', download_receipt, name='transaction-receipt'),
     # Admin reversal
     path('<uuid:transaction_id>/reverse/', reverse_transaction, name='transaction-reverse'),
+
+    # Export transactions
+    path('export/', export_transactions, name='transaction-export'),
 ]

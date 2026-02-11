@@ -7,6 +7,8 @@ import Register from './pages/Register';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import KYC from './pages/KYC';
+import Transactions from './pages/Transactions';
+import Transfer from './pages/Transfer';;
 
 function App() {
   return (
@@ -36,6 +38,16 @@ function App() {
               </PrivateRoute>
             }
           />
+
+          <Route 
+            path='/transactions'
+            element={<PrivateRoute><Transactions /></PrivateRoute>}
+          />
+
+          <Route 
+            path='/transfer'
+            element={<PrivateRoute><Transfer /></PrivateRoute>}
+          />
           
           {/* 404 - Not Found */}
           <Route
@@ -46,10 +58,10 @@ function App() {
                   <h1 className="text-6xl font-bold text-gray-300 mb-4">404</h1>
                   <p className="text-xl text-gray-600 mb-8">Page not found</p>
                   <a
-                    href="/login"
+                    href="/"
                     className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition"
                   >
-                    Go to Login
+                    Go to Home
                   </a>
                 </div>
               </div>
