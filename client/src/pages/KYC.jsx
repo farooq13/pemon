@@ -247,7 +247,7 @@ const KYC = () => {
             </div>
 
             {/* Title */}
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">KYC Submitted Successfully! 🎉</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">KYC Submitted Successfully!</h2>
 
             {/* Message */}
             <p className="text-gray-600 mb-2">

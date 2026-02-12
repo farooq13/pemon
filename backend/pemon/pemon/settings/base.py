@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'kyc',
     'wallets',
     'transactions',
+    'p2p_transfers',
 ]
 
 MIDDLEWARE = [
