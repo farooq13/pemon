@@ -140,7 +140,7 @@ const TransferForm = ({ walletData, onSubmit, loading }) => {
               value={formData.recipient_identifier}
               onChange={(e) => handleRecipientChange(e.target.value)}
               onFocus={() => setShowRecipientList(true)}
-              placeholder="Enter email or phone number"
+              placeholder="Recipient account number"
               className={`
                 w-full px-4 py-3 pl-11 pr-11 rounded-lg border
                 ${errors.recipient_identifier 

@@ -1,11 +1,9 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, ArrowLeftRight, TrendingUp, CreditCard, User } from 'lucide-react';
 
-/**
- * BottomNavigation Component
- * 
- * Mobile bottom navigation bar.
- * Shows on mobile/tablet, hidden on desktop.
+/*
+  Mobile bottom navigation bar.
+  Shows on mobile/tablet, hidden on desktop.
  */
 const BottomNavigation = () => {
   const navigate = useNavigate();
@@ -60,14 +58,14 @@ const BottomNavigation = () => {
               key={item.id}
               onClick={() => navigate(item.path)}
               className={`
-                flex flex-col items-center justify-center gap-1 transition-colors
+                flex flex-col items-center justify-center gap-1 transition-colors 
                 ${active 
                   ? 'text-blue-600' 
                   : 'text-gray-500 hover:text-gray-700'
                 }
               `}
             >
-              <Icon className={`w-5 h-5 ${active ? 'stroke-[2.5]' : ''}`} />
+              <Icon className={`w-5 h-5 hover:cursor-pointer ${active ? 'stroke-[2.5]' : ''}`} />
               <span className={`text-xs ${active ? 'font-semibold' : 'font-medium'}`}>
                 {item.label}
               </span>

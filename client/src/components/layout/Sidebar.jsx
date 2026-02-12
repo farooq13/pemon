@@ -69,9 +69,11 @@ const Sidebar = () => {
               </div>
             )}
 
-            <div className="p-2 rounded-lg">
-              <Menu className="w-5 h-5 text-gray-600" />
-            </div>
+            {collapsed && (
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">P</span>
+               </div>
+            )}
           </div>
 
           {/* User Info */}
@@ -101,7 +103,7 @@ const Sidebar = () => {
                   key={item.id}
                   onClick={() => navigate(item.path)}
                   className={`
-                    w-full flex items-center gap-3 px-3 py-3 rounded-lg
+                    w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:cursor-pointer
                     transition-all
                     ${active
                       ? 'bg-blue-50 text-blue-600'
@@ -141,7 +143,7 @@ const Sidebar = () => {
                   key={item.id}
                   onClick={() => navigate(item.path)}
                   className={`
-                    w-full flex items-center gap-3 px-3 py-3 rounded-lg
+                    w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:cursor-pointer
                     transition-all
                     ${active
                       ? 'bg-blue-50 text-blue-600'
@@ -159,7 +161,7 @@ const Sidebar = () => {
             <button
               onClick={() => navigate('/profile')}
               className={`
-                w-full flex items-center gap-3 px-3 py-3 rounded-lg
+                w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:cursor-pointer
                 transition-all text-gray-700 hover:bg-gray-50
                 ${collapsed ? 'justify-center' : ''}
               `}
@@ -172,7 +174,7 @@ const Sidebar = () => {
             <button
               onClick={handleLogout}
               className={`
-                w-full flex items-center gap-3 px-3 py-3 rounded-lg
+                w-full flex items-center gap-3 px-3 py-3 rounded-lg hover:cursor-pointer
                 transition-all text-red-600 hover:bg-red-50
                 ${collapsed ? 'justify-center' : ''}
               `}

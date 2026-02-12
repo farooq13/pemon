@@ -94,7 +94,7 @@ const Transfer = () => {
           <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4">
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+              className="flex items-center gap-2 text-gray-700 hover:text-gray-900 hover:cursor-pointer"
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="font-medium">Back to Dashboard</span>
@@ -246,7 +246,7 @@ const Transfer = () => {
             onClick={() => navigate('/dashboard')}
             className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5 hover:cursor-pointer" />
             <span className="font-medium">Send Money</span>
           </button>
         </div>

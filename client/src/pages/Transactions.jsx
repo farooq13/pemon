@@ -113,7 +113,7 @@ const Transactions = () => {
           <div className="flex items-center justify-between mb-4">
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+              className="flex items-center gap-2 text-gray-700 hover:text-gray-900 hover:cursor-pointer"
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="font-medium hidden sm:inline">Back</span>
@@ -127,8 +127,8 @@ const Transactions = () => {
               onClick={() => setShowExportModal(true)}
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition"
             >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Export</span>
+              <Download className="w-4 h-4 hover:cursor-pointer" />
+              <span className="hidden sm:inline hover:cursor-pointer">Export</span>
             </button>
           </div>
 

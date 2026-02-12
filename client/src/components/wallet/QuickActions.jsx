@@ -61,7 +61,7 @@ const QuickActions = ({ walletData }) => {
     <div className="bg-white rounded-[24px] shadow-sm p-4 lg:p-5">
       <h3 className="font-bold text-gray-900 text-base mb-3.5 lg:mb-4">Quick Actions</h3>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+      <div className="grid grid-cols-4 gap-3 lg:gap-4">
         {actions.map((action) => {
           const IconComponent = action.icon;
           

@@ -80,13 +80,13 @@ const Dashboard = () => {
             <div className="flex items-center justify-between">
               {/* User Greeting */}
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-blue-600 flex items-center justify-center">
                   <span className="text-white font-bold text-sm">
                     {user?.email?.charAt(0).toUpperCase() || 'U'}
                   </span>
                 </div>
                 <div>
-                  <p className="text-[10px] text-gray-500 leading-none mb-0.5">Good day</p>
+                  <p className="text-[10px] text-gray-500 leading-none mb-0.5">Hi</p>
                   <p className="text-sm font-bold text-gray-900 leading-none">
                     {user?.first_name || user?.email?.split('@')[0] || 'User'}
                   </p>
@@ -142,7 +142,7 @@ const Dashboard = () => {
 
           {/* Balance Card - Modern Design */}
           <div className="relative overflow-hidden">
-            <div className="bg-blue-500 from-blue-600 via-blue-700 to-purple-700 rounded-[28px] p-5 lg:p-6 text-white shadow-xl shadow-blue-200">
+            <div className="bg-blue-500 from-blue-600 via-blue-700 to-purple-700 rounded-[15px] p-5 lg:p-6 text-white shadow-xl shadow-blue-200">
               {loading ? (
                 <div className="animate-pulse space-y-4">
                   <div className="h-3 bg-blue-500/50 rounded w-1/3"></div>
@@ -181,7 +181,7 @@ const Dashboard = () => {
                     {/* Eye Toggle */}
                     <button
                       onClick={() => setShowBalance(!showBalance)}
-                      className="p-2 hover:bg-white/10 rounded-full transition-all active:scale-95"
+                      className="p-2 hover:bg-white/10 hover:cursor-pointer rounded-full transition-all active:scale-95"
                     >
                       {showBalance ? (
                         <Eye className="w-5 h-5" strokeWidth={2.5} />
