@@ -7,7 +7,7 @@ import useDebounce from '../hooks/useDebounce';
 import TransactionList from '../components/transactions/TransactionList';
 import TransactionFilters from '../components/transactions/TransactionFilters';
 import Pagination from '../components/transactions/Pagination';
-import TransactionDetailModal from '../components/transactions/TransactionDetailModal';
+import TransactionReceipt from '../components/transactions/TransactionReceipt';
 import ExportModal from '../components/transactions/ExportModal';
 
 
@@ -200,9 +200,9 @@ const Transactions = () => {
         )}
       </main>
 
-      {/* Transaction Detail Modal */}
+      {/* Transaction Receipt Modal */}
       {selectedTransaction && (
-        <TransactionDetailModal
+        <TransactionReceipt
           transaction={selectedTransaction}
           isOpen={!!selectedTransaction}
           onClose={() => setSelectedTransaction(null)}
