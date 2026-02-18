@@ -39,7 +39,7 @@ const Transfer = () => {
 
       if (result.valid) {
         setTransferData(formData);
-        setRecipientDetails(result.data);
+        setRecipientDetails(result.recipient);
         setShowConfirmModal(true);
       }
     } catch (error) {
@@ -157,21 +157,21 @@ const Transfer = () => {
             <div className="space-y-3">
               <button
                 onClick={handleStartNewTransfer}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition"
+                className="w-full bg-blue-600 hover:bg-blue-700 hover:cursor-pointer text-white font-semibold py-3 rounded-lg transition"
               >
                 Send Again
               </button>
 
               <button
                 onClick={() => navigate('/transactions')}
-                className="w-full border border-gray-300 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-50 transition"
+                className="w-full border border-gray-300 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-50 hover:cursor-pointer transition"
               >
                 View Transaction History
               </button>
 
               <button
                 onClick={() => navigate('/dashboard')}
-                className="w-full text-gray-600 font-medium py-2"
+                className="w-full text-gray-600 font-medium py-2 hover:cursor-pointer"
               >
                 Back to Dashboard
               </button>
@@ -271,9 +271,8 @@ const Transfer = () => {
           </h2>
 
           <TransferForm
-            walletData={walletData}
-            onSubmit={handleFormSubmit}
-            loading={loading}
+            walletBalance={walletData?.balance}
+            onTransferInitiated={handleFormSubmit}
           />
         </div>
       </main>

@@ -24,17 +24,6 @@ class P2PTransferView(APIView):
     
     Process a peer-to-peer money transfer.
     
-    Request Body:
-        {
-            "recipient_identifier": "user@example.com",
-            "amount": "1000.00",
-            "description": "Payment for lunch"
-        }
-    
-    Returns:
-        201: Transfer successful with transaction details
-        400: Validation error
-        500: Server error
     """
     
     permission_classes = [IsAuthenticated]
@@ -170,126 +159,146 @@ class P2PTransferView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def get_recent_recipients(request):
-    """
-    GET /api/transfers/recent-recipients/
-    
-    Get list of recent transfer recipients for autocomplete.
-    
-    Returns:
-        200: List of recent recipients
-    """
-    user = request.user
-    
-    # Get recent transfers
-    recent_transfers = Transaction.objects.filter(
-        user=user,
-        transaction_type=TransactionType.TRANSFER,
-        status='COMPLETED'
-    ).select_related('recipient').order_by('-created_at')[:10]
-    
-    # Extract unique recipients
-    recipients = []
-    seen_ids = set()
-    
-    for txn in recent_transfers:
-        if txn.recipient and txn.recipient.id not in seen_ids:
-            recipients.append({
-                'id': str(txn.recipient.id),
-                'email': txn.recipient.email,
-                'phone_number': txn.recipient.phone_number,
-                'name': (
-                    f"{txn.recipient.first_name} {txn.recipient.last_name}".strip()
-                    if hasattr(txn.recipient, 'first_name')
-                    else txn.recipient.email
-                ),
-                'last_transfer_amount': str(txn.amount),
-                'last_transfer_date': txn.created_at.isoformat()
-            })
-            seen_ids.add(txn.recipient.id)
-    
-    return Response({
-        'status': 'success',
-        'data': recipients
-    })
-
-
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def validate_recipient(request):
     """
-    POST /api/transfers/validate-recipient/
+    POST /api/v1/transfers/validate-recipient/
     
-    Validate a recipient before showing transfer form.
-    
-    Request Body:
-        {
-            "identifier": "user@example.com" or "+2348012345678"
-        }
-    
-    Returns:
-        200: Recipient valid with details
-        400: Recipient not found or invalid
+    Validate a recipient by email or account number.
+    Returns recipient details if found.
     """
-    identifier = request.data.get('identifier', '').strip()
+    try:
+        # Get identifier from request
+        identifier = request.data.get('identifier', '').strip()
+        
+        if not identifier:
+            return Response({
+                'status': 'error',
+                'message': 'Recipient identifier is required',
+                'valid': False
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        logger.info(f"Validating recipient: {identifier}")
+        
+        # Import Wallet here to avoid circular import issues
+        from wallets.models import Wallet
+        
+        user = None
+        wallet = None
+        
+        # Determine if email or account number
+        if '@' in identifier:
+            # Email lookup
+            try:
+                user = User.objects.get(email=identifier)
+            except User.DoesNotExist:
+                logger.warning(f"User not found by email: {identifier}")
+                return Response({
+                    'status': 'error',
+                    'message': 'Recipient not found',
+                    'valid': False
+                }, status=status.HTTP_404_NOT_FOUND)
+            
+            # Get wallet
+            try:
+                wallet = Wallet.objects.get(user=user)
+            except Wallet.DoesNotExist:
+                logger.warning(f"Wallet not found for user: {user.email}")
+                return Response({
+                    'status': 'error',
+                    'message': 'Recipient wallet not found',
+                    'valid': False
+                }, status=status.HTTP_404_NOT_FOUND)
+        
+        else:
+            # Account number lookup
+            try:
+                wallet = Wallet.objects.select_related('user').get(
+                    virtual_account_number=identifier
+                )
+                user = wallet.user
+            except Wallet.DoesNotExist:
+                logger.warning(f"Wallet not found by account: {identifier}")
+                return Response({
+                    'status': 'error',
+                    'message': 'Account number not found',
+                    'valid': False
+                }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if trying to send to self
+        if user.id == request.user.id:
+            return Response({
+                'status': 'error',
+                'message': 'Cannot send money to yourself',
+                'valid': False
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if wallet is frozen
+        if wallet.is_frozen:
+            return Response({
+                'status': 'error',
+                'message': 'Recipient account is frozen',
+                'valid': False
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Success - return recipient details
+        logger.info(f"Validation successful for: {user.email}")
+        
+        return Response({
+            'status': 'success',
+            'valid': True,
+            'recipient': {
+                'id': str(user.id),
+                'email': user.email,
+                'first_name': getattr(user, 'first_name', '') or '',
+                'last_name': getattr(user, 'last_name', '') or '',
+                'account_number': wallet.virtual_account_number,
+                'phone_number': getattr(user, 'phone_number', '') or '',
+            }
+        }, status=status.HTTP_200_OK)
     
-    if not identifier:
+    except Exception as e:
+        logger.exception(f"Unexpected error in validate_recipient: {str(e)}")
         return Response({
             'status': 'error',
-            'message': 'Recipient identifier is required'
-        }, status=status.HTTP_400_BAD_REQUEST)
-    
-    # Find user
-    user = None
-    if '@' in identifier:
-        try:
-            user = User.objects.get(email=identifier)
-        except User.DoesNotExist:
-            pass
-    else:
-        cleaned_phone = identifier.replace(' ', '').replace('-', '')
-        try:
-            user = User.objects.get(phone_number=cleaned_phone)
-        except User.DoesNotExist:
-            pass
-    
-    if not user:
-        return Response({
-            'status': 'error',
-            'message': 'Recipient not found',
+            'message': f'Server error: {str(e)}',
             'valid': False
-        }, status=status.HTTP_404_NOT_FOUND)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_recent_recipients(request):
+    """    
+    Get list of recent transfer recipients for the authenticated user.
+    """
+    user = request.user
     
-    # Check if has wallet
-    if not hasattr(user, 'wallet'):
-        return Response({
-            'status': 'error',
-            'message': 'Recipient has not completed KYC verification',
-            'valid': False
-        }, status=status.HTTP_400_BAD_REQUEST)
+    # Get recent transactions where user is sender
+    recent_transactions = Transaction.objects.filter(
+        user=user,
+        transaction_type=TransactionType.TRANSFER,
+        recipient__isnull=False
+    ).select_related('recipient').order_by('-created_at')[:10]
     
-    # Check if user trying to send to themselves
-    if user.id == request.user.id:
-        return Response({
-            'status': 'error',
-            'message': 'You cannot send money to yourself',
-            'valid': False
-        }, status=status.HTTP_400_BAD_REQUEST)
+    # Build unique recipients list
+    recipients = {}
+    for txn in recent_transactions:
+        if txn.recipient and txn.recipient.id not in recipients:
+            try:
+                recipient_wallet = Wallet.objects.get(user=txn.recipient)
+                recipients[txn.recipient.id] = {
+                    'email': txn.recipient.email,
+                    'first_name': txn.recipient.first_name,
+                    'last_name': txn.recipient.last_name,
+                    'account_number': recipient_wallet.virtual_account_number,
+                    'last_transaction_date': txn.created_at.isoformat(),
+                }
+            except Wallet.DoesNotExist:
+                continue
     
-    # Return recipient details
     return Response({
         'status': 'success',
-        'valid': True,
-        'data': {
-            'id': str(user.id),
-            'email': user.email,
-            'phone_number': user.phone_number,
-            'name': (
-                f"{user.first_name} {user.last_name}".strip()
-                if hasattr(user, 'first_name')
-                else user.email
-            ),
-        }
+        'data': list(recipients.values())
     })

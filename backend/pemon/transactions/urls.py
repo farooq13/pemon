@@ -7,12 +7,14 @@ from .views import (
     download_receipt,
     reverse_transaction,
     export_transactions,
+    get_transaction_history,
 )
 app_name = 'transactions'
 
 urlpatterns = [
     # List and details
-    path('', TransactionListView.as_view(), name='transaction-list'),
+    # path('', TransactionListView.as_view(), name='transaction-list'),
+    path('', get_transaction_history, name='transaction-history'),
     path('<uuid:id>/', TransactionDetailView.as_view(), name='transaction-detail'),
     
     # Statistics and summaries

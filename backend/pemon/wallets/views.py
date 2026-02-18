@@ -8,8 +8,13 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from django.shortcuts import get_object_or_404
+from django.db import transaction as db_transaction
+from django.contrib.auth import get_user_model
+from decimal import Decimal
 
 from .models import Wallet
+from transactions.models import Transaction, TransactionType
+from transactions.services import LedgerService
 from .serializers import (
     WalletBalanceSerializer,
     WalletDetailSerializer,
@@ -18,6 +23,7 @@ from .serializers import (
 from .services import WalletService
 
 logger = logging.getLogger(__name__)
+User = get_user_model()
 
 
 class WalletBalanceView(APIView):
@@ -208,3 +214,172 @@ def check_wallet_status(request):
                 'message': 'Complete KYC verification to get a wallet'
             }
         }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+@db_transaction.atomic
+def admin_credit_wallet(request):
+    """
+    Admin endpoint to manually credit a user's wallet (for testing/support).
+    
+    """
+    user_email = request.data.get('user_email')
+    amount = request.data.get('amount')
+    description = request.data.get('description', 'Admin credit')
+    
+    # Validate inputs
+    if not user_email or not amount:
+        return Response({
+            'status': 'error',
+            'message': 'user_email and amount are required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        amount = Decimal(str(amount))
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+    except (ValueError, decimal.InvalidOperation):
+        return Response({
+            'status': 'error',
+            'message': 'Invalid amount. Must be a positive number'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Get user
+    try:
+        user = User.objects.get(email=user_email)
+    except User.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': f'User with email {user_email} not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Get wallet
+    try:
+        wallet = user.wallet
+    except:
+        return Response({
+            'status': 'error',
+            'message': f'User {user_email} does not have a wallet'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Create deposit transaction
+    txn = LedgerService.create_transaction(
+        user=user,
+        transaction_type=TransactionType.DEPOSIT,
+        amount=amount,
+        description=description,
+        metadata={
+            'source': 'admin_credit',
+            'admin_user': request.user.email,
+        }
+    )
+    
+    # Credit the wallet
+    LedgerService.process_credit(
+        txn=txn,
+        wallet=wallet,
+        amount=amount,
+        description=description
+    )
+    
+    # Complete transaction
+    LedgerService.complete_transaction(txn)
+    
+    return Response({
+        'status': 'success',
+        'message': f'Successfully credited ₦{amount:,.2f} to {user_email}',
+        'data': {
+            'user_email': user_email,
+            'amount': str(amount),
+            'previous_balance': str(txn.ledger_entries.first().balance_before),
+            'new_balance': str(wallet.balance),
+            'transaction_reference': txn.reference
+        }
+    })
+
+
+@api_view(['POST'])
+@permission_classes([IsAdminUser])
+@db_transaction.atomic
+def admin_debit_wallet(request):
+    """
+    Admin endpoint to manually debit a user's wallet.
+    
+    """
+    user_email = request.data.get('user_email')
+    amount = request.data.get('amount')
+    description = request.data.get('description', 'Admin debit')
+    
+    if not user_email or not amount:
+        return Response({
+            'status': 'error',
+            'message': 'user_email and amount are required'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        amount = Decimal(str(amount))
+        if amount <= 0:
+            raise ValueError("Amount must be positive")
+    except (ValueError, decimal.InvalidOperation):
+        return Response({
+            'status': 'error',
+            'message': 'Invalid amount'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        user = User.objects.get(email=user_email)
+        wallet = user.wallet
+    except User.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': f'User {user_email} not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except:
+        return Response({
+            'status': 'error',
+            'message': f'Wallet not found for {user_email}'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    # Check sufficient balance
+    if wallet.balance < amount:
+        return Response({
+            'status': 'error',
+            'message': f'Insufficient balance. Available: ₦{wallet.balance:,.2f}'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    # Create withdrawal transaction
+    txn = LedgerService.create_transaction(
+        user=user,
+        transaction_type=TransactionType.WITHDRAWAL,
+        amount=amount,
+        description=description,
+        metadata={
+            'source': 'admin_debit',
+            'admin_user': request.user.email,
+        }
+    )
+    
+    # Debit the wallet
+    LedgerService.process_debit(
+        txn=txn,
+        wallet=wallet,
+        amount=amount,
+        description=description
+    )
+    
+    # Complete transaction
+    LedgerService.complete_transaction(txn)
+    
+    return Response({
+        'status': 'success',
+        'message': f'Successfully debited ₦{amount:,.2f} from {user_email}',
+        'data': {
+            'user_email': user_email,
+            'amount': str(amount),
+            'previous_balance': str(txn.ledger_entries.first().balance_before),
+            'new_balance': str(wallet.balance),
+            'transaction_reference': txn.reference
+        }
+    })
+

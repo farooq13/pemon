@@ -140,7 +140,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Balance Card - Modern Design */}
+          {/* Balance Card */}
           <div className="relative overflow-hidden">
             <div className="bg-blue-500 from-blue-600 via-blue-700 to-purple-700 rounded-[15px] p-5 lg:p-6 text-white shadow-xl shadow-blue-200">
               {loading ? (
@@ -225,7 +225,7 @@ const Dashboard = () => {
 
                   {/* Frozen Warning */}
                   {walletData.is_frozen && (
-                    <div className="mt-3 p-2.5 bg-yellow-400/20 backdrop-blur-sm border border-yellow-300/30 rounded-lg">
+                    <div className="mt-3 p-2.5 bg-red-400 border border-red-300 rounded-lg">
                       <p className="text-xs text-yellow-100 flex items-center gap-1.5">
                         <Zap className="w-3.5 h-3.5" />
                         Wallet is frozen. Contact support.

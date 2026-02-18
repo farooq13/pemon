@@ -1,174 +1,128 @@
-import { X, User, ArrowRight, AlertCircle } from 'lucide-react';
-import transferService from '../../services/transferService';
+import { X, AlertCircle } from 'lucide-react';
 
+const ConfirmationModal = ({ transferData, onConfirm, onCancel, loading }) => {
+  console.log('ConfirmationModal rendered with:', { transferData, loading });
 
-const ConfirmationModal = ({ 
-  isOpen, 
-  onClose, 
-  transferData, 
-  recipientDetails,
-  onConfirm,
-  loading 
-}) => {
-  if (!isOpen) return null;
+  if (!transferData) {
+    console.error('ConfirmationModal: No transferData provided!');
+    return null;
+  }
 
-  const amount = parseFloat(transferData.amount);
+  const { recipient_info, amount, description, account_number } = transferData;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-        onClick={onClose}
+        onClick={loading ? undefined : onCancel}
       ></div>
 
       {/* Modal */}
-      <div className="flex min-h-full items-end sm:items-center justify-center p-0 sm:p-4">
-        <div className="relative bg-white w-full sm:max-w-lg sm:rounded-2xl rounded-t-2xl shadow-xl transform transition-all">
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
           {/* Header */}
-          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
-            <h3 className="text-lg font-bold text-gray-900">Confirm Transfer</h3>
-            <button
-              onClick={onClose}
-              disabled={loading}
-              className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
-            >
-              <X className="w-6 h-6" />
-            </button>
+          <div className="bg-gradient-to-r from-blue-600 to-blue-600 px-6 py-4 text-white">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold">Confirm Transfer</h2>
+              {!loading && (
+                <button
+                  onClick={onCancel}
+                  className="p-1 hover:bg-white/20 hover:cursor-pointer rounded-full transition"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Content */}
-          <div className="px-6 py-6 space-y-6">
-            {/* Warning Banner */}
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 flex gap-3">
+          <div className="p-6 space-y-6">
+            {/* Warning */}
+            <div className="flex items-start gap-3 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
               <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-yellow-800">
-                <p className="font-medium">Please verify the details</p>
-                <p className="mt-1">This action cannot be undone. Make sure all information is correct.</p>
-              </div>
-            </div>
-
-            {/* Transfer Flow Visualization */}
-            <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-6">
-              <div className="flex items-center justify-between">
-                {/* Sender */}
-                <div className="flex-1 text-center">
-                  <div className="mx-auto w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center mb-2">
-                    <User className="w-8 h-8 text-white" />
-                  </div>
-                  <p className="text-sm font-medium text-gray-900">You</p>
-                </div>
-
-                {/* Arrow */}
-                <div className="flex-shrink-0 px-4">
-                  <ArrowRight className="w-8 h-8 text-gray-400" />
-                </div>
-
-                {/* Recipient */}
-                <div className="flex-1 text-center">
-                  <div className="mx-auto w-16 h-16 rounded-full bg-green-600 flex items-center justify-center mb-2">
-                    <User className="w-8 h-8 text-white" />
-                  </div>
-                  <p className="text-sm font-medium text-gray-900 truncate px-2">
-                    {recipientDetails?.name || 'Recipient'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Amount Display */}
-              <div className="mt-6 text-center">
-                <p className="text-sm text-gray-600 mb-1">Transfer Amount</p>
-                <p className="text-4xl font-bold text-gray-900">
-                  {transferService.formatAmount(amount)}
+              <div>
+                <p className="text-sm font-medium text-yellow-900">
+                  Please review the details carefully
+                </p>
+                <p className="text-xs text-yellow-700 mt-1">
+                  This action cannot be undone
                 </p>
               </div>
             </div>
 
-            {/* Transfer Details */}
-            <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-              <div className="flex justify-between items-start">
-                <span className="text-sm text-gray-600">To</span>
-                <div className="text-right">
-                  <p className="text-sm font-medium text-gray-900">
-                    {recipientDetails?.name}
-                  </p>
-                  <p className="text-xs text-gray-600">{recipientDetails?.email}</p>
+            {/* Amount */}
+            <div className="text-center py-4">
+              <p className="text-sm text-gray-600 mb-1">You're sending</p>
+              <p className="text-4xl font-bold text-gray-900">
+                ₦{parseFloat(amount).toLocaleString('en-NG', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}
+              </p>
+            </div>
+
+            {/* Recipient Details */}
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">To</p>
+                <p className="text-base font-semibold text-gray-900">
+                  {recipient_info.first_name} {recipient_info.last_name}
+                </p>
+                <p className="text-sm text-gray-600">{recipient_info.email}</p>
+              </div>
+
+              <div>
+                <p className="text-xs text-gray-500 mb-1">Account Number</p>
+                <p className="text-base font-mono font-medium text-gray-900">
+                  {account_number}
+                </p>
+              </div>
+
+              {description && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Description</p>
+                  <p className="text-sm text-gray-700">{description}</p>
                 </div>
-              </div>
-
-              <div className="border-t border-gray-200"></div>
-
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Amount</span>
-                <span className="text-sm font-medium text-gray-900">
-                  {transferService.formatAmount(amount)}
-                </span>
-              </div>
-
-              {transferData.description && (
-                <>
-                  <div className="border-t border-gray-200"></div>
-                  <div className="flex justify-between items-start">
-                    <span className="text-sm text-gray-600">Description</span>
-                    <p className="text-sm text-gray-900 text-right max-w-[200px]">
-                      {transferData.description}
-                    </p>
-                  </div>
-                </>
               )}
-
-              <div className="border-t border-gray-200"></div>
-
-              {/* Fee (if applicable) */}
-              <div className="flex justify-between">
-                <span className="text-sm text-gray-600">Fee</span>
-                <span className="text-sm font-medium text-green-600">
-                  Free
-                </span>
-              </div>
-
-              <div className="border-t-2 border-gray-300 pt-2"></div>
-
-              {/* Total */}
-              <div className="flex justify-between items-center">
-                <span className="text-base font-semibold text-gray-900">Total</span>
-                <span className="text-lg font-bold text-gray-900">
-                  {transferService.formatAmount(amount)}
-                </span>
-              </div>
             </div>
           </div>
 
-          {/* Footer Actions */}
-          <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 space-y-3 rounded-b-2xl">
+          {/* Actions */}
+          <div className="bg-gray-50 px-6 py-4 flex gap-3">
+            <button
+              onClick={onCancel}
+              disabled={loading}
+              className={`
+                flex-1 py-3 rounded-lg font-semibold transition hover:cursor-pointer
+                ${loading
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                }
+              `}
+            >
+              Cancel
+            </button>
+
             <button
               onClick={onConfirm}
               disabled={loading}
               className={`
-                w-full py-4 rounded-lg font-semibold text-white text-lg
-                transition-all duration-200
+                flex-1 py-3 rounded-lg font-semibold text-white transition hover:cursor-pointer
                 ${loading
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 active:scale-95'
+                  : 'bg-blue-600 hover:bg-blue-700'
                 }
               `}
             >
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  Sending...
+                  Processing...
                 </span>
               ) : (
                 'Confirm & Send'
               )}
-            </button>
-
-            <button
-              onClick={onClose}
-              disabled={loading}
-              className="w-full py-3 text-gray-700 font-medium hover:bg-gray-50 rounded-lg transition disabled:opacity-50"
-            >
-              Cancel
             </button>
           </div>
         </div>
