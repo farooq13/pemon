@@ -16,13 +16,14 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,http://127.0.0.1:5173/', cast=Csv())
 
 
 
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -77,6 +78,14 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "pemon.wsgi.application"
+ASGI_APPLICATION = "pemon.asgi.application"
+
+# CHANNEL LAYERS
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}
 
 
 # Database
@@ -86,6 +95,9 @@ DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
         "NAME": BASE_DIR / "db.sqlite3",
+        "OPTIONS": {
+            "timeout": 20,
+        }
     }
 }
 

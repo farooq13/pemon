@@ -10,6 +10,7 @@ from .views import (
     ResendOTPView,
     UserProfileView,
     UserRegistrationView,
+    SetTransferPinView,
 )
 
 app_name = 'accounts'
@@ -31,5 +32,8 @@ urlpatterns = [
     
     # Password management
     path('change-password/', PasswordChangeView.as_view(), name='change-password'),
+    
+    # Transfer PIN
+    path('set-transfer-pin/', SetTransferPinView.as_view(), name='set-transfer-pin'),
    
 ]

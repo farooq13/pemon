@@ -365,17 +365,14 @@ class LedgerEntry(models.Model):
                                    f'Expected {expected_balance}, got {self.balance_after}'
                 })
     
-    def save(self, *args, **kwargs):
-        """
-        Override save to run validation.
-        
-        Note: Ledger entries are IMMUTABLE - they should never be updated.
-        """
-        if self.pk:
-            raise ValidationError(
-                'Ledger entries are immutable and cannot be updated. '
-                'Create a reversal transaction instead.'
-            )
-        
-        self.full_clean()
-        super().save(*args, **kwargs)
+        def save(self, *args, **kwargs):
+            # Check if record exists in database (not just if pk is set)
+            creating = self._state.adding
+            
+            if not creating:  # This is an update
+                raise ValidationError(
+                    "Ledger entries are immutable and cannot be updated. "
+                    "Create a reversal transaction instead."
+                )
+            
+            super().save(*args, **kwargs)

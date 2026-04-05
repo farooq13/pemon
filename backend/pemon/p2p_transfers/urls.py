@@ -10,7 +10,7 @@ app_name = 'transfers'
 
 urlpatterns = [
     # P2P Transfer
-    path('transfers/', P2PTransferView.as_view(), name='p2p-transfer'),
+    path('p2p/', P2PTransferView.as_view(), name='p2p-transfer'),
     
     # Helper endpoints
     path('recent-recipients/', get_recent_recipients, name='recent-recipients'),

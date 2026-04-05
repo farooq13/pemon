@@ -68,7 +68,7 @@ const TransactionFilters = ({ filters, onFilterChange, onClear }) => {
             <select
               value={filters.type || ''}
               onChange={(e) => onFilterChange({ ...filters, type: e.target.value })}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 hover:cursor-pointer py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {transactionTypes.map(type => (
                 <option key={type.value} value={type.value}>
@@ -86,7 +86,7 @@ const TransactionFilters = ({ filters, onFilterChange, onClear }) => {
             <select
               value={filters.status || ''}
               onChange={(e) => onFilterChange({ ...filters, status: e.target.value })}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full hover:cursor-pointer px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               {statuses.map(status => (
                 <option key={status.value} value={status.value}>
@@ -106,7 +106,7 @@ const TransactionFilters = ({ filters, onFilterChange, onClear }) => {
                 type="date"
                 value={filters.start_date || ''}
                 onChange={(e) => onFilterChange({ ...filters, start_date: e.target.value })}
-                className="w-full px-3 py-2 pl-9 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full hover:cursor-pointer px-3 py-2 pl-9 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
@@ -122,7 +122,7 @@ const TransactionFilters = ({ filters, onFilterChange, onClear }) => {
                 type="date"
                 value={filters.end_date || ''}
                 onChange={(e) => onFilterChange({ ...filters, end_date: e.target.value })}
-                className="w-full px-3 py-2 pl-9 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full hover:cursor-pointer px-3 py-2 pl-9 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <Calendar className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>

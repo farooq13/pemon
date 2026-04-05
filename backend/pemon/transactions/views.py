@@ -17,7 +17,8 @@ from .models import Transaction, LedgerEntry, TransactionStatus, TransactionType
 from .serializers import (
     TransactionListSerializer,
     TransactionDetailSerializer,
-    TransactionStatsSerializer
+    TransactionStatsSerializer,
+    TransactionSerializer,
 )
 
 from django.http import HttpResponse, FileResponse
@@ -42,21 +43,7 @@ class TransactionPagination(PageNumberPagination):
 
 class TransactionListView(ListAPIView):
     """
-    GET /api/transactions/
-    
     List user's transactions with filtering and pagination.
-    
-    Query Parameters:
-        - page: Page number
-        - page_size: Items per page (max 100)
-        - type: Filter by transaction type
-        - status: Filter by status
-        - start_date: Filter from date (YYYY-MM-DD)
-        - end_date: Filter to date (YYYY-MM-DD)
-        - search: Search in reference or description
-    
-    Returns:
-        200: Paginated list of transactions
     """
     
     permission_classes = [IsAuthenticated]
@@ -140,14 +127,8 @@ class TransactionListView(ListAPIView):
 
 class TransactionDetailView(RetrieveAPIView):
     """
-    GET /api/transactions/<id>/
-    
     Get detailed information about a specific transaction.
     
-    Returns:
-        200: Transaction details with ledger entries
-        403: User not authorized to view this transaction
-        404: Transaction not found
     """
     
     permission_classes = [IsAuthenticated]
@@ -182,16 +163,8 @@ class TransactionDetailView(RetrieveAPIView):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def transaction_stats(request):
-    """
-    GET /api/transactions/stats/
-    
+    """    
     Get transaction statistics for the user.
-    
-    Query Parameters:
-        - period: Time period (7d, 30d, 90d, 1y, all) - default: 30d
-    
-    Returns:
-        200: Transaction statistics
     """
     user = request.user
     period = request.query_params.get('period', '30d')
@@ -410,21 +383,9 @@ def download_receipt(request, transaction_id):
 @permission_classes([IsAdminUser])
 @db_transaction.atomic
 def reverse_transaction(request, transaction_id):
-    """
-    POST /api/transactions/<id>/reverse/
-    
+    """ 
     Reverse a completed transaction (Admin only).
     
-    Request Body:
-        {
-            "reason": "Customer request for refund"
-        }
-    
-    Returns:
-        200: Reversal successful with new transaction details
-        400: Transaction cannot be reversed
-        403: Not authorized
-        404: Transaction not found
     """
     # Get transaction
     txn = get_object_or_404(Transaction, id=transaction_id)
@@ -492,23 +453,110 @@ def reverse_transaction(request, transaction_id):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_transaction_history(request):
+    """
+    GET /api/v1/transactions/
+    
+    Get transaction history for authenticated user.
+    Shows all transactions where user is sender OR recipient.
+    
+    Query Parameters:
+        page: Page number (default: 1)
+        page_size: Items per page (default: 20)
+        status: Filter by status (PENDING, COMPLETED, FAILED)
+        type: Filter by type (TRANSFER, DEPOSIT, WITHDRAWAL, etc)
+        search: Search by reference or description
+    """
+    user = request.user
+    
+    # Get all transactions where user is involved (as sender or recipient)
+    transactions = Transaction.objects.filter(
+        Q(user=user) | Q(recipient=user)
+    ).select_related('user', 'recipient').order_by('-created_at')
+    
+    # Apply filters
+    status_filter = request.query_params.get('status')
+    if status_filter:
+        transactions = transactions.filter(status=status_filter.upper())
+    
+    type_filter = request.query_params.get('type')
+    if type_filter:
+        transactions = transactions.filter(transaction_type=type_filter.upper())
+    
+    search = request.query_params.get('search')
+    if search:
+        transactions = transactions.filter(
+            Q(reference__icontains=search) | 
+            Q(description__icontains=search)
+        )
+    
+    # Pagination
+    page = int(request.query_params.get('page', 1))
+    page_size = int(request.query_params.get('page_size', 20))
+    
+    start = (page - 1) * page_size
+    end = start + page_size
+    
+    total_count = transactions.count()
+    paginated_transactions = transactions[start:end]
+    
+    # Serialize with context
+    serializer = TransactionSerializer(
+        paginated_transactions, 
+        many=True,
+        context={'request': request}
+    )
+    
+    return Response({
+        'status': 'success',
+        'data': serializer.data,
+        'pagination': {
+            'page': page,
+            'page_size': page_size,
+            'total_count': total_count,
+            'total_pages': (total_count + page_size - 1) // page_size,
+        }
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_transaction_detail(request, transaction_id):
+    """
+    GET /api/v1/transactions/<id>/
+    
+    Get detailed information about a specific transaction.
+    User must be involved in the transaction (sender or recipient).
+    """
+    user = request.user
+    
+    try:
+        transaction = Transaction.objects.select_related(
+            'user', 'recipient'
+        ).prefetch_related('ledger_entries').get(
+            Q(id=transaction_id) & (Q(user=user) | Q(recipient=user))
+        )
+    except Transaction.DoesNotExist:
+        return Response({
+            'status': 'error',
+            'message': 'Transaction not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    
+    serializer = TransactionSerializer(transaction, context={'request': request})
+    
+    return Response({
+        'status': 'success',
+        'data': serializer.data
+    })
+
 # Export Transactions
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def export_transactions(request):
     '''
-    GET /api/transactions/export/
-    
     Export user's transactions to CSV.
-    
-    Query Parameters:
-        start_date: Filter from date (YYYY-MM-DD)
-        end_date: Filter to date (YYYY-MM-DD)
-        type: Filter by transaction type
-        status: Filter by status
-    
-    Returns:
-        200: CSV file download
     '''
     user = request.user
     

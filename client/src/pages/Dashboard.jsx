@@ -17,6 +17,7 @@ import transactionService from '../services/transactionService';
 import QuickActions from '../components/wallet/QuickActions';
 import BottomNavigation from '../components/layout/BottomNavigation';
 import Sidebar from '../components/layout/Sidebar';
+import NotificationBell from '../components/notifications/NotificationBell';
 
 
 const Dashboard = () => {
@@ -80,13 +81,13 @@ const Dashboard = () => {
             <div className="flex items-center justify-between">
               {/* User Greeting */}
               <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-600 to-blue-600 flex items-center justify-center">
                   <span className="text-white font-bold text-sm">
                     {user?.email?.charAt(0).toUpperCase() || 'U'}
                   </span>
                 </div>
                 <div>
-                  <p className="text-[10px] text-gray-500 leading-none mb-0.5">Good day</p>
+                  <p className="text-[10px] text-gray-500 leading-none mb-0.5">Hi</p>
                   <p className="text-sm font-bold text-gray-900 leading-none">
                     {user?.first_name || user?.email?.split('@')[0] || 'User'}
                   </p>
@@ -94,10 +95,7 @@ const Dashboard = () => {
               </div>
 
               {/* Notification Bell */}
-              <button className="relative p-2 hover:bg-gray-50 rounded-full transition-colors active:scale-95">
-                <Bell className="w-5 h-5 text-gray-700" strokeWidth={2.5} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-              </button>
+              <NotificationBell />
             </div>
           </div>
         </header>
@@ -112,10 +110,7 @@ const Dashboard = () => {
                 </p>
               </div>
               
-              <button className="relative p-2.5 hover:bg-gray-50 rounded-full transition-colors">
-                <Bell className="w-6 h-6 text-gray-700" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
+              <NotificationBell />
             </div>
           </div>
         </header>
@@ -140,9 +135,9 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Balance Card - Modern Design */}
+          {/* Balance Card */}
           <div className="relative overflow-hidden">
-            <div className="bg-blue-500 from-blue-600 via-blue-700 to-purple-700 rounded-[28px] p-5 lg:p-6 text-white shadow-xl shadow-blue-200">
+            <div className="bg-blue-500 from-blue-600 via-blue-700 to-purple-700 rounded-[15px] p-5 lg:p-6 text-white shadow-xl shadow-blue-200">
               {loading ? (
                 <div className="animate-pulse space-y-4">
                   <div className="h-3 bg-blue-500/50 rounded w-1/3"></div>
@@ -181,7 +176,7 @@ const Dashboard = () => {
                     {/* Eye Toggle */}
                     <button
                       onClick={() => setShowBalance(!showBalance)}
-                      className="p-2 hover:bg-white/10 rounded-full transition-all active:scale-95"
+                      className="p-2 hover:bg-white/10 hover:cursor-pointer rounded-full transition-all active:scale-95"
                     >
                       {showBalance ? (
                         <Eye className="w-5 h-5" strokeWidth={2.5} />
@@ -225,7 +220,7 @@ const Dashboard = () => {
 
                   {/* Frozen Warning */}
                   {walletData.is_frozen && (
-                    <div className="mt-3 p-2.5 bg-yellow-400/20 backdrop-blur-sm border border-yellow-300/30 rounded-lg">
+                    <div className="mt-3 p-2.5 bg-red-400 border border-red-300 rounded-lg">
                       <p className="text-xs text-yellow-100 flex items-center gap-1.5">
                         <Zap className="w-3.5 h-3.5" />
                         Wallet is frozen. Contact support.

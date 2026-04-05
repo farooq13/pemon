@@ -8,7 +8,8 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import KYC from './pages/KYC';
 import Transactions from './pages/Transactions';
-import Transfer from './pages/Transfer';;
+import Transfer from './pages/Transfer';
+import Settings from './pages/Settings';
 
 function App() {
   return (
@@ -47,6 +48,11 @@ function App() {
           <Route 
             path='/transfer'
             element={<PrivateRoute><Transfer /></PrivateRoute>}
+          />
+          
+          <Route 
+            path='/settings'
+            element={<PrivateRoute><Settings /></PrivateRoute>}
           />
           
           {/* 404 - Not Found */}

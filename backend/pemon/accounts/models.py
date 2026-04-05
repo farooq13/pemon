@@ -165,6 +165,14 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
         help_text='User\'s profile image'
     )
     
+    # Transfer PIN
+    transfer_pin = models.CharField(
+        max_length=128,
+        null=True,
+        blank=True,
+        help_text='Hashed 4-digit transfer PIN'
+    )
+    
     # Device Information (for security)
     last_login_ip = models.GenericIPAddressField(
         null=True,
@@ -245,6 +253,31 @@ class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
             bool: True if both email and phone are verified
         """
         return self.email_verified and self.phone_verified
+
+    @property
+    def has_transfer_pin(self):
+        """Check if user has set a transfer PIN."""
+        return bool(self.transfer_pin)
+
+    def set_transfer_pin(self, raw_pin):
+        """
+        Hash and set the transfer PIN.
+        Must be precisely 4 digits.
+        """
+        from django.contrib.auth.hashers import make_password
+        self.transfer_pin = make_password(raw_pin)
+        self.save(update_fields=['transfer_pin', 'updated_at'])
+
+    def check_transfer_pin(self, raw_pin):
+        """
+        Check if the provided PIN matches the hashed transfer PIN.
+        """
+        if not self.has_transfer_pin:
+            return False
+            
+        from django.contrib.auth.hashers import check_password
+        return check_password(raw_pin, self.transfer_pin)
+
 
 
 class OTPVerification(TimeStampedModel):

@@ -1,231 +1,227 @@
 import { useState, useEffect } from 'react';
-import { Search, X, Clock, User } from 'lucide-react';
+import { User, AlertCircle, CheckCircle, Search } from 'lucide-react';
 import transferService from '../../services/transferService';
+import walletService from '../../services/walletService';
 
 
-const TransferForm = ({ walletData, onSubmit, loading }) => {
-  const [formData, setFormData] = useState({
-    recipient_identifier: '',
-    amount: '',
-    description: ''
-  });
+const TransferForm = ({ onTransferInitiated, walletBalance }) => {
+  const [recipientAccount, setRecipientAccount] = useState('');
+  const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
 
-  const [recipientDetails, setRecipientDetails] = useState(null);
-  const [recentRecipients, setRecentRecipients] = useState([]);
-  const [showRecipientList, setShowRecipientList] = useState(false);
-  const [validatingRecipient, setValidatingRecipient] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [validating, setValidating] = useState(false);
+  const [recipientInfo, setRecipientInfo] = useState(null);
+  const [validationError, setValidationError] = useState('');
+  const [formErrors, setFormErrors] = useState({});
 
-  // Load recent recipients on mount
+  const quickAmounts = [100, 500, 1000, 2000, 5000];
+
+  // Validate recipient account number (debounced)
   useEffect(() => {
-    loadRecentRecipients();
-  }, []);
-
-  const loadRecentRecipients = async () => {
-    try {
-      const recipients = await transferService.getRecentRecipients();
-      setRecentRecipients(recipients);
-    } catch (error) {
-      console.error('Failed to load recent recipients:', error);
-    }
-  };
-
-  const validateRecipient = async (identifier) => {
-    if (!identifier || identifier.length < 3) {
-      setRecipientDetails(null);
+    const accountNumber = recipientAccount.trim();
+    
+    // Reset validation state if input is cleared
+    if (!accountNumber) {
+      setRecipientInfo(null);
+      setValidationError('');
       return;
     }
 
-    setValidatingRecipient(true);
-    setErrors({ ...errors, recipient_identifier: null });
+    // Only validate if it looks like an account number (10-12 digits)
+    if (!/^\d{10,12}$/.test(accountNumber)) {
+      setRecipientInfo(null);
+      setValidationError('');
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      validateRecipient(accountNumber);
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [recipientAccount]);
+
+  const validateRecipient = async (accountNumber) => {
+    setValidating(true);
+    setValidationError('');
+    setRecipientInfo(null);
 
     try {
-      const result = await transferService.validateRecipient(identifier);
+      const response = await transferService.validateRecipient(accountNumber);
       
-      if (result.valid) {
-        setRecipientDetails(result.data);
-        setErrors({ ...errors, recipient_identifier: null });
+      if (response.valid) {
+        setRecipientInfo(response.recipient);
+        setValidationError('');
+        setFormErrors(prev => ({ ...prev, recipient_account: '' }));
+      } else {
+        setValidationError('Account number not found');
+        setRecipientInfo(null);
       }
     } catch (error) {
-      setRecipientDetails(null);
-      setErrors({
-        ...errors,
-        recipient_identifier: error.response?.data?.message || 'Recipient not found'
-      });
+      console.error('Validation error:', error);
+      setValidationError('Unable to verify account number');
+      setRecipientInfo(null);
     } finally {
-      setValidatingRecipient(false);
+      setValidating(false);
     }
   };
 
-  const handleRecipientChange = (value) => {
-    setFormData({ ...formData, recipient_identifier: value });
-    setRecipientDetails(null);
+  const handleAccountNumberChange = (e) => {
+    const value = e.target.value;
+    // Only allow digits
+    const cleaned = value.replace(/\D/g, '');
     
-    // Debounced validation
-    if (value.length >= 3) {
-      const timer = setTimeout(() => validateRecipient(value), 500);
-      return () => clearTimeout(timer);
+    // Limit to 12 digits
+    if (cleaned.length <= 12) {
+      setRecipientAccount(cleaned);
+      setFormErrors(prev => ({ ...prev, recipient_account: '' }));
     }
   };
 
-  const selectRecipient = (recipient) => {
-    setFormData({
-      ...formData,
-      recipient_identifier: recipient.email,
-      amount: formData.amount || recipient.last_transfer_amount || ''
-    });
-    setRecipientDetails({
-      email: recipient.email,
-      name: recipient.name,
-      phone_number: recipient.phone_number
-    });
-    setShowRecipientList(false);
+  const handleAmountChange = (e) => {
+    setAmount(e.target.value);
+    setFormErrors(prev => ({ ...prev, amount: '' }));
   };
 
-  const handleAmountChange = (value) => {
-    // Remove non-numeric characters except decimal point
-    const cleaned = value.replace(/[^0-9.]/g, '');
-    setFormData({ ...formData, amount: cleaned });
-    setErrors({ ...errors, amount: null });
+  const handleQuickAmount = (quickAmount) => {
+    setAmount(quickAmount.toString());
+    setFormErrors(prev => ({ ...prev, amount: '' }));
+  };
+
+  const handleDescriptionChange = (e) => {
+    setDescription(e.target.value);
+    setFormErrors(prev => ({ ...prev, description: '' }));
   };
 
   const validateForm = () => {
-    const newErrors = {};
+    const errors = {};
 
-    if (!formData.recipient_identifier) {
-      newErrors.recipient_identifier = 'Recipient is required';
+    // Account number validation
+    if (!recipientAccount) {
+      errors.recipient_account = 'Account number is required';
+    } else if (!/^\d{10,12}$/.test(recipientAccount)) {
+      errors.recipient_account = 'Account number must be 10 digits';
+    } else if (!recipientInfo) {
+      errors.recipient_account = 'Please wait for account verification';
     }
 
-    if (!recipientDetails) {
-      newErrors.recipient_identifier = 'Please select a valid recipient';
+    // Amount validation
+    const amountNum = parseFloat(amount);
+    if (!amount) {
+      errors.amount = 'Amount is required';
+    } else if (isNaN(amountNum) || amountNum <= 0) {
+      errors.amount = 'Invalid amount';
+    } else if (amountNum < 10) {
+      errors.amount = 'Minimum transfer amount is ₦10';
+    } else if (walletBalance && amountNum > parseFloat(walletBalance)) {
+      errors.amount = 'Insufficient balance';
     }
 
-    if (!formData.amount || parseFloat(formData.amount) <= 0) {
-      newErrors.amount = 'Please enter a valid amount';
+    // Description validation
+    if (description && description.length > 500) {
+      errors.description = 'Description too long (max 500 characters)';
     }
 
-    const amount = parseFloat(formData.amount);
-    if (amount < 10) {
-      newErrors.amount = 'Minimum transfer amount is ₦10.00';
-    }
-
-    if (walletData && amount > parseFloat(walletData.balance)) {
-      newErrors.amount = `Insufficient balance (Available: ${transferService.formatAmount(walletData.balance)})`;
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    if (validateForm()) {
-      onSubmit(formData);
+
+    if (!validateForm()) {
+      return;
     }
+
+    onTransferInitiated({
+      recipient_identifier: recipientInfo.email, // Backend needs email
+      amount: amount,
+      description: description,
+      recipient_info: recipientInfo,
+      account_number: recipientAccount
+    });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Recipient Input */}
+    <form onSubmit={handleSubmit} className="space-y-5">
+      {/* Account Number Input */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Recipient
+          Recipient Account Number
         </label>
-        
-        <div className="relative">
-          <div className="relative">
-            <input
-              type="text"
-              value={formData.recipient_identifier}
-              onChange={(e) => handleRecipientChange(e.target.value)}
-              onFocus={() => setShowRecipientList(true)}
-              placeholder="Enter email or phone number"
-              className={`
-                w-full px-4 py-3 pl-11 pr-11 rounded-lg border
-                ${errors.recipient_identifier 
-                  ? 'border-red-500 focus:ring-red-500' 
-                  : 'border-gray-300 focus:ring-blue-500'
-                }
-                focus:outline-none focus:ring-2
-                text-base
-              `}
-            />
-            
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            
-            {formData.recipient_identifier && (
-              <button
-                type="button"
-                onClick={() => {
-                  setFormData({ ...formData, recipient_identifier: '' });
-                  setRecipientDetails(null);
-                }}
-                className="absolute right-3 top-1/2 transform -translate-y-1/2"
-              >
-                <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
-              </button>
-            )}
-          </div>
 
-          {validatingRecipient && (
+        <div className="relative">
+          <input
+            type="text"
+            inputMode="numeric"
+            value={recipientAccount}
+            onChange={handleAccountNumberChange}
+            placeholder="Enter account number"
+            className={`
+              w-full px-4 py-3 pl-11 rounded-lg border text-base
+              ${formErrors.recipient_account
+                ? 'border-red-500 focus:ring-red-500'
+                : recipientInfo
+                  ? 'border-green-500 focus:ring-green-500'
+                  : 'border-gray-300 focus:ring-blue-500'
+              }
+              focus:outline-none focus:ring-2
+            `}
+          />
+
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+
+          {validating && (
             <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
             </div>
           )}
+
+          {!validating && recipientInfo && (
+            <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-green-600" />
+          )}
+
+          {!validating && validationError && (
+            <AlertCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-red-600" />
+          )}
         </div>
 
-        {/* Validation Error */}
-        {errors.recipient_identifier && (
-          <p className="mt-1 text-sm text-red-600">{errors.recipient_identifier}</p>
+        {formErrors.recipient_account && (
+          <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            {formErrors.recipient_account}
+          </p>
         )}
 
-        {/* Recipient Confirmed */}
-        {recipientDetails && !errors.recipient_identifier && (
-          <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
-              <User className="w-5 h-5 text-green-600" />
+        {validationError && !formErrors.recipient_account && (
+          <p className="mt-1.5 text-sm text-red-600">
+            {validationError}
+          </p>
+        )}
+
+        {/* Recipient Info Card */}
+        {recipientInfo && (
+          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                <User className="w-5 h-5 text-green-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-green-900">
+                  {recipientInfo.first_name} {recipientInfo.last_name}
+                </p>
+                <p className="text-xs text-green-700 truncate">
+                  {recipientInfo.accountNumber}
+                </p>
+              </div>
+              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {recipientDetails.name}
-              </p>
-              <p className="text-xs text-gray-600 truncate">{recipientDetails.email}</p>
-            </div>
-            <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
           </div>
         )}
 
-        {/* Recent Recipients Dropdown */}
-        {showRecipientList && recentRecipients.length > 0 && !recipientDetails && (
-          <div className="absolute z-10 mt-1 w-full bg-white rounded-lg shadow-lg border border-gray-200 max-h-60 overflow-y-auto">
-            <div className="p-2">
-              <p className="text-xs font-medium text-gray-500 px-3 py-2">Recent Recipients</p>
-              {recentRecipients.map((recipient) => (
-                <button
-                  key={recipient.id}
-                  type="button"
-                  onClick={() => selectRecipient(recipient)}
-                  className="w-full px-3 py-2 hover:bg-gray-50 rounded-lg flex items-center gap-3 text-left transition"
-                >
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                    <User className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{recipient.name}</p>
-                    <p className="text-xs text-gray-500 truncate">{recipient.email}</p>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
-                    <Clock className="w-3 h-3" />
-                    <span>{transferService.formatAmount(recipient.last_transfer_amount)}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        <p className="mt-1.5 text-xs text-gray-500">
+          Enter the recipient's account number
+        </p>
       </div>
 
       {/* Amount Input */}
@@ -233,21 +229,23 @@ const TransferForm = ({ walletData, onSubmit, loading }) => {
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Amount
         </label>
-        
+
         <div className="relative">
-          <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 text-lg font-medium">
+          <span className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500 font-medium">
             ₦
           </span>
           <input
-            type="text"
+            type="number"
             inputMode="decimal"
-            value={formData.amount}
-            onChange={(e) => handleAmountChange(e.target.value)}
+            value={amount}
+            onChange={handleAmountChange}
             placeholder="0.00"
+            min="10"
+            step="0.01"
             className={`
-              w-full px-4 py-3 pl-9 rounded-lg border text-lg font-medium
-              ${errors.amount 
-                ? 'border-red-500 focus:ring-red-500' 
+              w-full px-4 py-3 pl-9 rounded-lg border text-base font-medium
+              ${formErrors.amount
+                ? 'border-red-500 focus:ring-red-500'
                 : 'border-gray-300 focus:ring-blue-500'
               }
               focus:outline-none focus:ring-2
@@ -255,76 +253,95 @@ const TransferForm = ({ walletData, onSubmit, loading }) => {
           />
         </div>
 
-        {errors.amount && (
-          <p className="mt-1 text-sm text-red-600">{errors.amount}</p>
-        )}
-
-        {/* Available Balance */}
-        {walletData && (
-          <p className="mt-1 text-sm text-gray-600">
-            Available: {transferService.formatAmount(walletData.balance)}
+        {formErrors.amount && (
+          <p className="mt-1.5 text-sm text-red-600 flex items-center gap-1">
+            <AlertCircle className="w-4 h-4" />
+            {formErrors.amount}
           </p>
         )}
 
-        {/* Quick Amount Buttons - Mobile Optimized */}
-        <div className="grid grid-cols-3 gap-2 mt-3">
-          {['100', '500', '1000'].map((amount) => (
+        {/* Quick Amount Buttons */}
+        <div className="mt-3 flex flex-wrap gap-2">
+          {quickAmounts.map((quickAmt) => (
             <button
-              key={amount}
+              key={quickAmt}
               type="button"
-              onClick={() => handleAmountChange(amount)}
-              className="px-3 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition"
+              onClick={() => handleQuickAmount(quickAmt)}
+              className={`
+                px-4 py-2 rounded-lg text-sm font-medium transition-all
+                ${amount === quickAmt.toString()
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                }
+              `}
             >
-              ₦{amount}
+              ₦{quickAmt.toLocaleString()}
             </button>
           ))}
         </div>
+
+        {walletBalance && (
+          <p className="mt-2 text-xs text-gray-600">
+            Available balance: {walletService.formatCurrency(walletBalance)}
+          </p>
+        )}
       </div>
 
-      {/* Description (Optional) */}
+      {/* Description Input */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Description <span className="text-gray-400 text-xs">(Optional)</span>
+          Description (Optional)
         </label>
-        
+
         <textarea
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder="What's this for?"
-          rows="3"
-          maxLength="500"
-          className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          value={description}
+          onChange={handleDescriptionChange}
+          placeholder="What's this payment for?"
+          rows={3}
+          maxLength={500}
+          className={`
+            w-full px-4 py-3 rounded-lg border text-base resize-none
+            ${formErrors.description
+              ? 'border-red-500 focus:ring-red-500'
+              : 'border-gray-300 focus:ring-blue-500'
+            }
+            focus:outline-none focus:ring-2
+          `}
         />
-        
-        <p className="mt-1 text-xs text-gray-500 text-right">
-          {formData.description.length}/500
-        </p>
+
+        <div className="flex items-center justify-between mt-1.5">
+          {formErrors.description ? (
+            <p className="text-sm text-red-600 flex items-center gap-1">
+              <AlertCircle className="w-4 h-4" />
+              {formErrors.description}
+            </p>
+          ) : (
+            <p className="text-xs text-gray-500">
+              Add a note for this transfer
+            </p>
+          )}
+          <span className="text-xs text-gray-400">
+            {description.length}/500
+          </span>
+        </div>
       </div>
 
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={loading || !recipientDetails}
+        disabled={validating || !recipientInfo}
         className={`
-          w-full py-4 rounded-lg font-semibold text-white text-lg
-          transition-all duration-200
-          ${loading || !recipientDetails
+          w-full py-4 rounded-lg font-semibold text-white text-base transition-all
+          ${validating || !recipientInfo
             ? 'bg-gray-400 cursor-not-allowed'
-            : 'bg-blue-600 hover:bg-blue-700 active:scale-95'
+            : 'bg-blue-600 hover:bg-blue-700 active:scale-[0.98]'
           }
         `}
       >
-        {loading ? (
-          <span className="flex items-center justify-center gap-2">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-            Processing...
-          </span>
-        ) : (
-          'Continue'
-        )}
+        {validating ? 'Verifying...' : 'Continue'}
       </button>
     </form>
   );
 };
 
-export default TransferForm; 
+export default TransferForm;

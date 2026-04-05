@@ -1,8 +1,6 @@
 import TransactionItem from './TransactionItem';
 
-/*
- * Displays list of transactions with loading skeleton.
- */
+
 const TransactionList = ({ transactions, loading, onTransactionClick, currentUserEmail }) => {
   // Loading Skeleton
   if (loading) {

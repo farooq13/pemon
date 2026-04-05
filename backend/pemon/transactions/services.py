@@ -218,6 +218,36 @@ class LedgerService:
             f"Balance: ₦{balance_before} → ₦{wallet.balance}"
         )
         
+        # Create notification for recipient
+        from core.models import Notification
+        from channels.layers import get_channel_layer
+        from asgiref.sync import async_to_sync
+        
+        notification = Notification.objects.create(
+            user=wallet.user,
+            title="Money Received",
+            message=f"You received ₦{amount:,.2f}. {description}",
+            notification_type=Notification.NotificationType.TRANSACTION_RECEIVED,
+            related_entity_id=str(txn.id) if txn else None
+        )
+        
+        # Send WebSocket notification
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                f"user_{wallet.user.id}".replace("-", "_"),
+                {
+                    'type': 'notification_message',
+                    'data': {
+                        'id': str(notification.id),
+                        'title': notification.title,
+                        'message': notification.message,
+                        'type': notification.notification_type,
+                        'created_at': notification.created_at.isoformat()
+                    }
+                }
+            )
+        
         return entry
     
     @staticmethod

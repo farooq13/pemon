@@ -282,3 +282,34 @@ class AppVersion(BaseModel):
 
     def __str__(self):
         return f"{self.platform} v{self.version_number} (Build {self.build_number})"
+
+class Notification(BaseModel):
+    """
+    Model for System and Transactional Notifications.
+    """
+    class NotificationType(models.TextChoices):
+        SYSTEM = 'SYSTEM', 'System Alert'
+        TRANSACTION_RECEIVED = 'TRANSACTION_RECEIVED', 'Money Received'
+        ACCOUNT_UPDATE = 'ACCOUNT_UPDATE', 'Account Update'
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='notifications',
+        help_text="User this notification belongs to"
+    )
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    notification_type = models.CharField(
+        max_length=50,
+        choices=NotificationType.choices,
+        default=NotificationType.SYSTEM
+    )
+    is_read = models.BooleanField(default=False)
+    related_entity_id = models.CharField(max_length=255, blank=True, null=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Notification for {self.user.email} - {self.title}"

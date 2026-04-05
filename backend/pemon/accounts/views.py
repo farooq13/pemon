@@ -13,6 +13,7 @@ from .serializers import (
     ResendOTPSerializer,
     UserProfileSerializer,
     UserRegistrationSerializer,
+    SetTransferPinSerializer,
 )
 
 User = get_user_model()
@@ -286,3 +287,31 @@ class AuthStatusView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
+@extend_schema_view(
+    post=extend_schema(
+        summary="Set or update transfer PIN",
+        description="Set a 4-digit PIN for making P2P transfers.",
+        tags=['User Profile'],
+    )
+)
+class SetTransferPinView(APIView):
+    """
+    Set or update the user's transfer PIN.
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = SetTransferPinSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        user = request.user
+        pin = serializer.validated_data['pin']
+        
+        user.set_transfer_pin(pin)
+        
+        return Response({
+            'status': 'success',
+            'message': 'Transfer PIN has been set successfully.'
+        }, status=status.HTTP_200_OK)

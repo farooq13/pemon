@@ -14,11 +14,11 @@ class P2PTransferSerializer(serializers.Serializer):
     Serializer for peer-to-peer money transfers.
     
     Request Body:
-        {
+        {```````````
             "recipient_identifier": "user@example.com" or "+2348012345678",
             "amount": "1000.00",
             "description": "Lunch money",
-            "pin": "1234"  # Optional: Transaction PIN for security
+            "pin": "1234"  # Optional: Transaction PIN for security`
         }
     """
     
@@ -146,6 +146,22 @@ class P2PTransferSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 "You don't have an active wallet. Please complete KYC verification."
             )
+            
+        # Check transfer PIN
+        pin = attrs.get('pin')
+        if not pin:
+            raise serializers.ValidationError(
+                "Transfer PIN is required."
+            )
+        if not sender.has_transfer_pin:
+            raise serializers.ValidationError(
+                "You have not set up a transfer PIN. Please set it up in Settings."
+            )
+        if not sender.check_transfer_pin(pin):
+            raise serializers.ValidationError({
+                "pin": "Incorrect transfer PIN."
+            })
+
         
         sender_wallet = sender.wallet
         
@@ -200,12 +216,26 @@ class TransferReceiptSerializer(serializers.ModelSerializer):
     Returns complete transaction details after successful transfer.
     """
     
+    # Sender details
     sender_name = serializers.SerializerMethodField()
+    sender_account = serializers.SerializerMethodField()
     sender_email = serializers.EmailField(source='user.email', read_only=True)
+    user_name = serializers.SerializerMethodField()  # For compatibility
+    user_account = serializers.SerializerMethodField()  # For compatibility
+    
+    # Recipient details
     recipient_name = serializers.SerializerMethodField()
     recipient_email = serializers.SerializerMethodField()
+    recipient_account = serializers.SerializerMethodField()
+
+    # Other fields
     formatted_amount = serializers.SerializerMethodField()
     status_display = serializers.CharField(source='get_status_display', read_only=True)
+
+    # Context fields
+    is_debit = serializers.SerializerMethodField()
+    counterparty_name = serializers.SerializerMethodField()
+    counterparty_account = serializers.SerializerMethodField()
     
     class Meta:
         model = Transaction
@@ -217,13 +247,23 @@ class TransferReceiptSerializer(serializers.ModelSerializer):
             'formatted_amount',
             'status',
             'status_display',
+            # Sender fields
             'sender_name',
             'sender_email',
+            'sender_account',
+            'user_name',
+            'user_account',
+            # Recipient fields
             'recipient_name',
             'recipient_email',
+            'recipient_account',
+            # Context fields
+            'is_debit',
+            'counterparty_name',
+            'counterparty_account',
             'description',
             'created_at',
-            'completed_at',
+            'completed_at'
         ]
         read_only_fields = fields
     
@@ -234,6 +274,20 @@ class TransferReceiptSerializer(serializers.ModelSerializer):
             full_name = f"{user.first_name} {user.last_name}".strip()
             return full_name if full_name else user.email
         return user.email
+    
+    def get_sender_account(self, obj):
+        """Get sender's account number - ADDED."""
+        if obj.user and hasattr(obj.user, 'wallet'):
+            return obj.user.wallet.virtual_account_number
+        return None
+    
+    def get_user_name(self, obj):
+        """Get user (sender) name - for compatibility."""
+        return self.get_sender_name(obj)
+    
+    def get_user_account(self, obj):
+        """Get user (sender) account - for compatibility."""
+        return self.get_sender_account(obj)
     
     def get_recipient_name(self, obj):
         """Get recipient's name."""
@@ -252,6 +306,48 @@ class TransferReceiptSerializer(serializers.ModelSerializer):
             return obj.recipient.email
         return None
     
+    def get_recipient_account(self, obj):
+        """Get recipient's account number - ADDED."""
+        if obj.recipient and hasattr(obj.recipient, 'wallet'):
+            return obj.recipient.wallet.virtual_account_number
+        return None
+    
     def get_formatted_amount(self, obj):
         """Format amount with currency."""
         return f"₦{obj.amount:,.2f}"
+    
+    def get_is_debit(self, obj):
+        """Check if this is a debit for current user."""
+        request = self.context.get('request')
+        if not request or not request.user:
+            # Default to True (user is sender)
+            return True
+        return obj.user == request.user
+    
+    def get_counterparty_name(self, obj):
+        """Get the other party's name."""
+        request = self.context.get('request')
+        if not request or not request.user:
+            # Default to recipient
+            return self.get_recipient_name(obj)
+        
+        if obj.user == request.user:
+            # User is sender, return recipient
+            return self.get_recipient_name(obj)
+        else:
+            # User is recipient, return sender
+            return self.get_sender_name(obj)
+    
+    def get_counterparty_account(self, obj):
+        """Get the other party's account number."""
+        request = self.context.get('request')
+        if not request or not request.user:
+            # Default to recipient account
+            return self.get_recipient_account(obj)
+        
+        if obj.user == request.user:
+            # User is sender, return recipient account
+            return self.get_recipient_account(obj)
+        else:
+            # User is recipient, return sender account
+            return self.get_sender_account(obj)

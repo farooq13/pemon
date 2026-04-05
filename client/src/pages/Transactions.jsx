@@ -7,7 +7,7 @@ import useDebounce from '../hooks/useDebounce';
 import TransactionList from '../components/transactions/TransactionList';
 import TransactionFilters from '../components/transactions/TransactionFilters';
 import Pagination from '../components/transactions/Pagination';
-import TransactionDetailModal from '../components/transactions/TransactionDetailModal';
+import TransactionReceipt from '../components/transactions/TransactionReceipt';
 import ExportModal from '../components/transactions/ExportModal';
 
 
@@ -40,6 +40,7 @@ const Transactions = () => {
   // Modals
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [fetchingDetail, setFetchingDetail] = useState(false);
 
   // Fetch transactions
   useEffect(() => {
@@ -101,8 +102,31 @@ const Transactions = () => {
     setCurrentPage(1);
   };
 
-  const handleTransactionClick = (transaction) => {
-    setSelectedTransaction(transaction);
+  // FIXED: Fetch full transaction details before showing receipt
+  const handleTransactionClick = async (transaction) => {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('Transaction clicked:', transaction);
+    console.log('Transaction ID:', transaction.id);
+    
+    setFetchingDetail(true);
+    
+    try {
+      // Fetch FULL transaction details from backend
+      console.log('Fetching full transaction details...');
+      const fullTransaction = await transactionService.getTransactionDetail(transaction.id);
+      console.log('✓ Full transaction details received:', fullTransaction);
+      
+      setSelectedTransaction(fullTransaction);
+    } catch (error) {
+      console.error('❌ Failed to fetch transaction details:', error);
+      
+      // Fallback: Use transaction from list (might be incomplete)
+      console.warn('⚠ Using list transaction as fallback');
+      setSelectedTransaction(transaction);
+    } finally {
+      setFetchingDetail(false);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    }
   };
 
   return (
@@ -113,7 +137,7 @@ const Transactions = () => {
           <div className="flex items-center justify-between mb-4">
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+              className="flex items-center gap-2 text-gray-700 hover:text-gray-900 hover:cursor-pointer"
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="font-medium hidden sm:inline">Back</span>
@@ -127,8 +151,8 @@ const Transactions = () => {
               onClick={() => setShowExportModal(true)}
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition"
             >
-              <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Export</span>
+              <Download className="w-4 h-4 hover:cursor-pointer" />
+              <span className="hidden sm:inline hover:cursor-pointer">Export</span>
             </button>
           </div>
 
@@ -200,9 +224,19 @@ const Transactions = () => {
         )}
       </main>
 
-      {/* Transaction Detail Modal */}
-      {selectedTransaction && (
-        <TransactionDetailModal
+      {/* Loading Overlay while fetching details */}
+      {fetchingDetail && (
+        <div className="fixed inset-0 z-40 bg-black bg-opacity-20 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 shadow-xl">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-700 font-medium">Loading details...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Transaction Receipt Modal */}
+      {selectedTransaction && !fetchingDetail && (
+        <TransactionReceipt
           transaction={selectedTransaction}
           isOpen={!!selectedTransaction}
           onClose={() => setSelectedTransaction(null)}

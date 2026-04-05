@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import TransferForm from '../components/transfer/TransferForm';
 import ConfirmationModal from '../components/transfer/ConfirmationModal';
+import TransferPinModal from '../components/transfer/TransferPinModal';
 import transferService from '../services/transferService';
 import walletService from '../services/walletService';
+import authService from '../services/authService';
+
 
 
 const Transfer = () => {
@@ -16,6 +19,10 @@ const Transfer = () => {
   const [transferData, setTransferData] = useState(null);
   const [recipientDetails, setRecipientDetails] = useState(null);
   const [transferResult, setTransferResult] = useState(null);
+
+  const [showPinModal, setShowPinModal] = useState(false);
+  const user = authService.getCurrentUser() || {};
+  const hasPin = user.has_transfer_pin === true;
 
   useEffect(() => {
     fetchWalletData();
@@ -32,6 +39,7 @@ const Transfer = () => {
 
   const handleFormSubmit = async (formData) => {
     // Validate recipient one more time
+    setLoading(true);
     try {
       const result = await transferService.validateRecipient(
         formData.recipient_identifier
@@ -39,19 +47,27 @@ const Transfer = () => {
 
       if (result.valid) {
         setTransferData(formData);
-        setRecipientDetails(result.data);
+        setRecipientDetails(result.recipient);
         setShowConfirmModal(true);
       }
     } catch (error) {
       alert(error.response?.data?.message || 'Invalid recipient');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleConfirmTransfer = async () => {
+  const handleConfirmDetails = () => {
+    setShowConfirmModal(false);
+    setShowPinModal(true);
+  };
+
+  const handleConfirmTransfer = async (pin) => {
     setLoading(true);
 
     try {
-      const result = await transferService.sendMoney(transferData);
+      const finalData = { ...transferData, pin };
+      const result = await transferService.sendMoney(finalData);
 
       // Success
       setTransferResult({
@@ -63,8 +79,8 @@ const Transfer = () => {
       // Refresh wallet balance
       fetchWalletData();
 
-      // Close confirmation modal
-      setShowConfirmModal(false);
+      // Close pin modal
+      setShowPinModal(false);
     } catch (error) {
       // Error
       setTransferResult({
@@ -73,7 +89,7 @@ const Transfer = () => {
         errors: error.response?.data?.errors
       });
 
-      setShowConfirmModal(false);
+      setShowPinModal(false);
     } finally {
       setLoading(false);
     }
@@ -94,7 +110,7 @@ const Transfer = () => {
           <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4">
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+              className="flex items-center gap-2 text-gray-700 hover:text-gray-900 hover:cursor-pointer"
             >
               <ArrowLeft className="w-5 h-5" />
               <span className="font-medium">Back to Dashboard</span>
@@ -157,21 +173,21 @@ const Transfer = () => {
             <div className="space-y-3">
               <button
                 onClick={handleStartNewTransfer}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition"
+                className="w-full bg-blue-600 hover:bg-blue-700 hover:cursor-pointer text-white font-semibold py-3 rounded-lg transition"
               >
                 Send Again
               </button>
 
               <button
                 onClick={() => navigate('/transactions')}
-                className="w-full border border-gray-300 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-50 transition"
+                className="w-full border border-gray-300 text-gray-700 font-semibold py-3 rounded-lg hover:bg-gray-50 hover:cursor-pointer transition"
               >
                 View Transaction History
               </button>
 
               <button
                 onClick={() => navigate('/dashboard')}
-                className="w-full text-gray-600 font-medium py-2"
+                className="w-full text-gray-600 font-medium py-2 hover:cursor-pointer"
               >
                 Back to Dashboard
               </button>
@@ -246,7 +262,7 @@ const Transfer = () => {
             onClick={() => navigate('/dashboard')}
             className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-5 h-5 hover:cursor-pointer" />
             <span className="font-medium">Send Money</span>
           </button>
         </div>
@@ -271,9 +287,8 @@ const Transfer = () => {
           </h2>
 
           <TransferForm
-            walletData={walletData}
-            onSubmit={handleFormSubmit}
-            loading={loading}
+            walletBalance={walletData?.balance}
+            onTransferInitiated={handleFormSubmit}
           />
         </div>
       </main>
@@ -284,7 +299,15 @@ const Transfer = () => {
         onClose={() => setShowConfirmModal(false)}
         transferData={transferData}
         recipientDetails={recipientDetails}
+        onConfirm={handleConfirmDetails}
+        loading={false}
+      />
+
+      <TransferPinModal
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
         onConfirm={handleConfirmTransfer}
+        hasPin={hasPin}
         loading={loading}
       />
     </div>
