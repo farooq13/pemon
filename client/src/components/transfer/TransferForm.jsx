@@ -133,7 +133,6 @@ const TransferForm = ({ onTransferInitiated, walletBalance }) => {
       return;
     }
 
-    // Pass data to parent with recipient email
     onTransferInitiated({
       recipient_identifier: recipientInfo.email, // Backend needs email
       amount: amount,
@@ -212,7 +211,7 @@ const TransferForm = ({ onTransferInitiated, walletBalance }) => {
                   {recipientInfo.first_name} {recipientInfo.last_name}
                 </p>
                 <p className="text-xs text-green-700 truncate">
-                  {recipientInfo.email}
+                  {recipientInfo.accountNumber}
                 </p>
               </div>
               <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />

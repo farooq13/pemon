@@ -17,6 +17,7 @@ import transactionService from '../services/transactionService';
 import QuickActions from '../components/wallet/QuickActions';
 import BottomNavigation from '../components/layout/BottomNavigation';
 import Sidebar from '../components/layout/Sidebar';
+import NotificationBell from '../components/notifications/NotificationBell';
 
 
 const Dashboard = () => {
@@ -94,10 +95,7 @@ const Dashboard = () => {
               </div>
 
               {/* Notification Bell */}
-              <button className="relative p-2 hover:bg-gray-50 rounded-full transition-colors active:scale-95">
-                <Bell className="w-5 h-5 text-gray-700" strokeWidth={2.5} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
-              </button>
+              <NotificationBell />
             </div>
           </div>
         </header>
@@ -112,10 +110,7 @@ const Dashboard = () => {
                 </p>
               </div>
               
-              <button className="relative p-2.5 hover:bg-gray-50 rounded-full transition-colors">
-                <Bell className="w-6 h-6 text-gray-700" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full"></span>
-              </button>
+              <NotificationBell />
             </div>
           </div>
         </header>

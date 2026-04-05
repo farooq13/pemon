@@ -192,6 +192,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     
     full_name = serializers.CharField(source='get_full_name', read_only=True)
     is_verified = serializers.BooleanField(read_only=True)
+    has_transfer_pin = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = User
@@ -210,8 +211,24 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'is_verified',
             'profile_image',
             'date_joined',
+            'has_transfer_pin',
         ]
         read_only_fields = fields
+
+class SetTransferPinSerializer(serializers.Serializer):
+    """Serializer for setting a 4-digit transfer PIN."""
+    pin = serializers.CharField(
+        max_length=4, 
+        min_length=4, 
+        required=True,
+        help_text='4-digit transfer PIN'
+    )
+    
+    def validate_pin(self, value):
+        if not value.isdigit():
+            raise serializers.ValidationError('PIN must contain only numbers.')
+        return value
+
 
 
 class OTPVerificationSerializer(serializers.Serializer):

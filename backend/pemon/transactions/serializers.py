@@ -251,6 +251,10 @@ class TransactionDetailSerializer(serializers.ModelSerializer):
     ledger_entries = LedgerEntrySerializer(many=True, read_only=True)
     reversed_by_reference = serializers.SerializerMethodField()
     original_transaction_reference = serializers.SerializerMethodField()
+    is_debit = serializers.SerializerMethodField()
+    is_credit = serializers.SerializerMethodField()
+    counterparty_name = serializers.SerializerMethodField()
+    counterparty_account = serializers.SerializerMethodField()
     
     class Meta:
         model = Transaction
@@ -269,6 +273,10 @@ class TransactionDetailSerializer(serializers.ModelSerializer):
             'recipient_name',
             'description',
             'metadata',
+            'is_debit',
+            'is_credit',
+            'counterparty_name',
+            'counterparty_account',
             'ledger_entries',
             'reversed_by_reference',
             'original_transaction_reference',
@@ -317,6 +325,60 @@ class TransactionDetailSerializer(serializers.ModelSerializer):
         """Get original transaction reference if this is a reversal."""
         if obj.original_transaction:
             return obj.original_transaction.reference
+        return None
+
+    def get_is_debit(self, obj):
+        """Check if this transaction is a debit for the current user."""
+        request = self.context.get('request')
+        if not request or not request.user:
+            return False
+        return obj.user == request.user
+    
+    def get_is_credit(self, obj):
+        """Check if this transaction is a credit for the current user."""
+        request = self.context.get('request')
+        if not request or not request.user:
+            return False
+        return obj.recipient == request.user
+    
+    def get_counterparty_name(self, obj):
+        """Get the other party's name (for display in transaction list)."""
+        request = self.context.get('request')
+        if not request or not request.user:
+            return None
+        
+        # If current user is sender, show recipient
+        if obj.user == request.user:
+            if obj.recipient:
+                full_name = f"{obj.recipient.first_name} {obj.recipient.last_name}".strip()
+                return full_name if full_name else "Recipient"
+            return "External"
+        
+        # If current user is recipient, show sender
+        if obj.recipient == request.user:
+            full_name = f"{obj.user.first_name} {obj.user.last_name}".strip()
+            return full_name if full_name else "Sender"
+        
+        return None
+
+    def get_counterparty_account(self, obj):
+        """Get the other party's account number."""
+        request = self.context.get('request')
+        if not request or not request.user:
+            return None
+        
+        # If current user is sender, show recipient account
+        if obj.user == request.user:
+            if obj.recipient and hasattr(obj.recipient, 'wallet'):
+                return obj.recipient.wallet.virtual_account_number
+            return None
+        
+        # If current user is recipient, show sender account
+        if obj.recipient == request.user:
+            if obj.user and hasattr(obj.user, 'wallet'):
+                return obj.user.wallet.virtual_account_number
+            return None
+        
         return None
 
 

@@ -40,6 +40,7 @@ const Transactions = () => {
   // Modals
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [fetchingDetail, setFetchingDetail] = useState(false);
 
   // Fetch transactions
   useEffect(() => {
@@ -101,8 +102,31 @@ const Transactions = () => {
     setCurrentPage(1);
   };
 
-  const handleTransactionClick = (transaction) => {
-    setSelectedTransaction(transaction);
+  // FIXED: Fetch full transaction details before showing receipt
+  const handleTransactionClick = async (transaction) => {
+    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.log('Transaction clicked:', transaction);
+    console.log('Transaction ID:', transaction.id);
+    
+    setFetchingDetail(true);
+    
+    try {
+      // Fetch FULL transaction details from backend
+      console.log('Fetching full transaction details...');
+      const fullTransaction = await transactionService.getTransactionDetail(transaction.id);
+      console.log('✓ Full transaction details received:', fullTransaction);
+      
+      setSelectedTransaction(fullTransaction);
+    } catch (error) {
+      console.error('❌ Failed to fetch transaction details:', error);
+      
+      // Fallback: Use transaction from list (might be incomplete)
+      console.warn('⚠ Using list transaction as fallback');
+      setSelectedTransaction(transaction);
+    } finally {
+      setFetchingDetail(false);
+      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    }
   };
 
   return (
@@ -200,8 +224,18 @@ const Transactions = () => {
         )}
       </main>
 
+      {/* Loading Overlay while fetching details */}
+      {fetchingDetail && (
+        <div className="fixed inset-0 z-40 bg-black bg-opacity-20 flex items-center justify-center">
+          <div className="bg-white rounded-lg p-6 shadow-xl">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="mt-4 text-gray-700 font-medium">Loading details...</p>
+          </div>
+        </div>
+      )}
+
       {/* Transaction Receipt Modal */}
-      {selectedTransaction && (
+      {selectedTransaction && !fetchingDetail && (
         <TransactionReceipt
           transaction={selectedTransaction}
           isOpen={!!selectedTransaction}

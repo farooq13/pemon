@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, XCircle } from 'lucide-react';
 import TransferForm from '../components/transfer/TransferForm';
 import ConfirmationModal from '../components/transfer/ConfirmationModal';
+import TransferPinModal from '../components/transfer/TransferPinModal';
 import transferService from '../services/transferService';
 import walletService from '../services/walletService';
+import authService from '../services/authService';
+
 
 
 const Transfer = () => {
@@ -16,6 +19,10 @@ const Transfer = () => {
   const [transferData, setTransferData] = useState(null);
   const [recipientDetails, setRecipientDetails] = useState(null);
   const [transferResult, setTransferResult] = useState(null);
+
+  const [showPinModal, setShowPinModal] = useState(false);
+  const user = authService.getCurrentUser() || {};
+  const hasPin = user.has_transfer_pin === true;
 
   useEffect(() => {
     fetchWalletData();
@@ -32,6 +39,7 @@ const Transfer = () => {
 
   const handleFormSubmit = async (formData) => {
     // Validate recipient one more time
+    setLoading(true);
     try {
       const result = await transferService.validateRecipient(
         formData.recipient_identifier
@@ -44,14 +52,22 @@ const Transfer = () => {
       }
     } catch (error) {
       alert(error.response?.data?.message || 'Invalid recipient');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleConfirmTransfer = async () => {
+  const handleConfirmDetails = () => {
+    setShowConfirmModal(false);
+    setShowPinModal(true);
+  };
+
+  const handleConfirmTransfer = async (pin) => {
     setLoading(true);
 
     try {
-      const result = await transferService.sendMoney(transferData);
+      const finalData = { ...transferData, pin };
+      const result = await transferService.sendMoney(finalData);
 
       // Success
       setTransferResult({
@@ -63,8 +79,8 @@ const Transfer = () => {
       // Refresh wallet balance
       fetchWalletData();
 
-      // Close confirmation modal
-      setShowConfirmModal(false);
+      // Close pin modal
+      setShowPinModal(false);
     } catch (error) {
       // Error
       setTransferResult({
@@ -73,7 +89,7 @@ const Transfer = () => {
         errors: error.response?.data?.errors
       });
 
-      setShowConfirmModal(false);
+      setShowPinModal(false);
     } finally {
       setLoading(false);
     }
@@ -283,7 +299,15 @@ const Transfer = () => {
         onClose={() => setShowConfirmModal(false)}
         transferData={transferData}
         recipientDetails={recipientDetails}
+        onConfirm={handleConfirmDetails}
+        loading={false}
+      />
+
+      <TransferPinModal
+        isOpen={showPinModal}
+        onClose={() => setShowPinModal(false)}
         onConfirm={handleConfirmTransfer}
+        hasPin={hasPin}
         loading={loading}
       />
     </div>

@@ -96,6 +96,7 @@ urlpatterns = [
     path('api/v1/wallet/', include('wallets.urls')),
     path('api/v1/transactions/', include('transactions.urls')),
     path('api/v1/transfers/', include('p2p_transfers.urls')),
+    path('api/v1/core/', include('core.urls')),
     
 ]
 

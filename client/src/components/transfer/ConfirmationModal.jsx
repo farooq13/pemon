@@ -1,10 +1,7 @@
 import { X, AlertCircle } from 'lucide-react';
 
-const ConfirmationModal = ({ transferData, onConfirm, onCancel, loading }) => {
-  console.log('ConfirmationModal rendered with:', { transferData, loading });
-
-  if (!transferData) {
-    console.error('ConfirmationModal: No transferData provided!');
+const ConfirmationModal = ({ isOpen, transferData, onConfirm, onClose, loading }) => {
+  if (!isOpen || !transferData) {
     return null;
   }
 
@@ -15,19 +12,19 @@ const ConfirmationModal = ({ transferData, onConfirm, onCancel, loading }) => {
       {/* Backdrop */}
       <div 
         className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-        onClick={loading ? undefined : onCancel}
+        onClick={loading ? undefined : onClose}
       ></div>
 
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+        <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden z-10">
           {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-600 px-6 py-4 text-white">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold">Confirm Transfer</h2>
               {!loading && (
                 <button
-                  onClick={onCancel}
+                  onClick={onClose}
                   className="p-1 hover:bg-white/20 hover:cursor-pointer rounded-full transition"
                 >
                   <X className="w-6 h-6" />
@@ -91,7 +88,7 @@ const ConfirmationModal = ({ transferData, onConfirm, onCancel, loading }) => {
           {/* Actions */}
           <div className="bg-gray-50 px-6 py-4 flex gap-3">
             <button
-              onClick={onCancel}
+              onClick={onClose}
               disabled={loading}
               className={`
                 flex-1 py-3 rounded-lg font-semibold transition hover:cursor-pointer

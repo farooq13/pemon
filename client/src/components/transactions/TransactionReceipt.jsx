@@ -1,159 +1,226 @@
-import { useRef } from 'react';
-import { X, Download, Share2 } from 'lucide-react';
-import html2canvas from 'html2canvas';
+import React, { useRef, useState, useEffect } from "react";
+import { X } from "lucide-react";
+import * as htmlToImage from "html-to-image";
+import jsPDF from "jspdf";
+import QRCode from "qrcode";
 
-const TransactionReceipt = ({ transaction, onClose }) => {
+const TransactionReceiptModal = ({ transaction, onClose }) => {
   const receiptRef = useRef(null);
+  const [qrUrl, setQrUrl] = useState("");
 
-  if (!transaction) return null;
+  console.log('Receipt - Full transaction data:', transaction);
 
-  const isSuccess = transaction.status === 'COMPLETED';
+  // Helper to safely get values
+  const getValue = (value, fallback = 'N/A') => value || fallback;
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleString();
+  // Determine if user is sender or recipient
+  const isDebit = transaction.is_debit;
+
+  // Map the transaction data to receipt fields
+  const receiptData = {
+    // Amount
+    amount: transaction.amount || '0.00',
+    
+    // Status
+    status: transaction.status_display || transaction.status || 'COMPLETED',
+    
+    // Date/Time - format the created_at timestamp
+    date: transaction.created_at 
+      ? new Date(transaction.created_at).toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        })
+      : 'N/A',
+    
+    // Sender (the person who sent the money)
+    sender_name: isDebit
+      ? getValue(transaction.user_name, 'You')  // Current user is sender
+      : getValue(transaction.counterparty_name, transaction.user_name),  // Other party is sender
+    
+    sender_account: isDebit
+      ? getValue(transaction.user_account)
+      : getValue(transaction.counterparty_account, transaction.user_account),
+    
+    // Bank (always Pemon for both)
+    sender_bank: 'Pemon',
+    
+    // Recipient (the person receiving the money)
+    recipient_name: isDebit
+      ? getValue(transaction.counterparty_name, transaction.recipient_name)  // Other party is recipient
+      : getValue(transaction.user_name, 'You'),  // Current user is recipient
+    
+    recipient_account: isDebit
+      ? getValue(transaction.counterparty_account, transaction.recipient_account)
+      : getValue(transaction.user_account),
+    
+    // Transaction reference
+    reference: getValue(transaction.reference),
   };
 
-  const maskAccount = (account) => {
-    if (!account || account.length < 4) return account;
-    const lastFour = account.slice(-4);
-    return `**** **** **** ${lastFour}`;
+  console.log('Receipt data mapped:', receiptData);
+
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    const d = new Date(dateStr);
+    return d.toLocaleString();
   };
 
-  const handleShareAsImage = async () => {
-    try {
-      const canvas = await html2canvas(receiptRef.current, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-      });
+  const maskAccount = (acc) => {
+    if (!acc || acc === 'N/A' || acc.length < 6) return acc || "N/A";
+    return `${acc.slice(0, 4)}****${acc.slice(-2)}`;
+  };
 
-      const link = document.createElement('a');
-      link.download = `receipt-${transaction.reference}.png`;
-      link.href = canvas.toDataURL();
+  const handleShare = async (type) => {
+    if (!receiptRef.current) return;
+
+    const dataUrl = await htmlToImage.toPng(receiptRef.current);
+
+    if (type === "png") {
+      const link = document.createElement("a");
+      link.download = `receipt-${receiptData.reference}.png`;
+      link.href = dataUrl;
       link.click();
-    } catch (error) {
-      console.error(error);
+    }
+
+    if (type === "pdf") {
+      const pdf = new jsPDF();
+      const imgProps = pdf.getImageProperties(dataUrl);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`receipt-${receiptData.reference}.pdf`);
     }
   };
 
+  useEffect(() => {
+    const generateQR = async () => {
+      const qr = await QRCode.toDataURL(
+        JSON.stringify({
+          id: transaction.id,
+          ref: receiptData.reference,
+          amount: receiptData.amount,
+        })
+      );
+      setQrUrl(qr);
+    };
+    generateQR();
+  }, [transaction, receiptData]);
+
   return (
-    <div className="fixed inset-0 z-50 bg-black bg-opacity-40 flex items-center justify-center p-4">
-      
-      <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
-        
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+
+      {/* RECEIPT CARD */}
+      <div
+        ref={receiptRef}
+        className="bg-white w-[360px] rounded-2xl shadow-xl p-5"
+      >
+
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
-          <h2 className="text-lg font-bold text-gray-900">
-            Transaction Receipt
-          </h2>
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-lg font-semibold text-center text-blue-600">
+            Pemon
+          </h1>
           <button onClick={onClose}>
-            <X className="w-5 h-5 text-gray-500 hover:text-gray-700" />
+            <X size={18} className="hover:cursor-pointer" />
           </button>
         </div>
 
-        {/* Receipt Content */}
-        <div ref={receiptRef} className="p-6">
-
-          {/* Logo */}
-          <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-blue-600">Pemon</h1>
-            <p className="text-sm text-gray-500">
-              Seamless & Secure Payments
-            </p>
-          </div>
-
-          {/* Amount */}
-          <div className="text-center mb-6">
-            <p className={`text-4xl font-bold ${
-              isSuccess ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {transaction.formatted_amount}
-            </p>
-            <p className="text-sm text-gray-500 mt-1">
-              {transaction.status_display}
-            </p>
-            <p className="text-xs text-gray-400 mt-2">
-              {formatDate(transaction.created_at)}
-            </p>
-          </div>
-
-          {/* Divider */}
-          <div className="border-t my-4"></div>
-
-          {/* Recipient */}
-          <div className="mb-4">
-            <p className="text-xs text-gray-500 uppercase mb-1">
-              Recipient
-            </p>
-            <p className="font-semibold text-gray-900">
-              {transaction?.recipient_name || 'N/A'}
-            </p>
-            <p className="text-sm text-gray-600">
-              {maskAccount(transaction?.recipient_account)}
-            </p>
-          </div>
-
-          {/* Sender */}
-          <div className="mb-4">
-            <p className="text-xs text-gray-500 uppercase mb-1">
-              Sender
-            </p>
-            <p className="font-semibold text-gray-900">
-              {transaction?.user_name || 'N/A'}
-            </p>
-            <p className="text-sm text-gray-600">
-              {maskAccount(transaction?.user_account)}
-            </p>
-          </div>
-
-          {/* Divider */}
-          <div className="border-t my-4"></div>
-
-          {/* Meta Info */}
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Reference</span>
-              <span className="font-medium text-gray-900">
-                {transaction.reference}
-              </span>
-            </div>
-
-            <div className="flex justify-between">
-              <span className="text-gray-500">Transaction ID</span>
-              <span className="font-medium text-gray-900">
-                {transaction.id}
-              </span>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="mt-6 pt-4 border-t text-center text-xs text-gray-400">
-            Thank you for using Pemon.
-          </div>
+        {/* Title */}
+        <div className="text-center mb-3">
+           <span className="text-sm font-semibold text-gray-800">
+            Transaction Receipt
+          </span>
+          <p className="text-2xl font-bold text-gray-900">
+            ₦{receiptData.amount}
+          </p>
+          <p className="text-sm text-green-600 font-medium">
+            {receiptData.status}
+          </p>
         </div>
 
-        {/* Actions */}
-        <div className="grid grid-cols-2 gap-4 p-4 border-t bg-gray-50">
-          <button
-            onClick={handleShareAsImage}
-            className="flex items-center justify-center gap-2 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
-          >
-            <Share2 className="w-4 h-4" />
-            Share
-          </button>
+        <hr className="border-dashed my-3" />
 
-          <button
-            onClick={handleShareAsImage}
-            className="flex items-center justify-center gap-2 py-3 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg transition"
-          >
-            <Download className="w-4 h-4" />
-            Download
-          </button>
+        {/* Details */}
+        <div className="space-y-2 text-sm">
+
+          <Row
+            label="Date/Time"
+            value={receiptData.date}
+          />
+
+          <Row
+            label="Sender"
+            value={receiptData.sender_name}
+          />
+
+        
+
+          <Row
+            label="Bank Name"
+            value={receiptData.sender_bank}
+          />
+
+          <Row
+            label="Recipient"
+            value={receiptData.recipient_name}
+          />
+
+          
+
+          <Row
+            label="Transaction No"
+            value={receiptData.reference}
+          />
+
+        </div>
+
+        <hr className="border-dashed my-3" />
+
+        {/* QR */}
+        {qrUrl && (
+          <div className="flex flex-col items-center">
+            <img src={qrUrl} alt="QR" className="w-20 h-20" />
+            <p className="text-[10px] text-gray-400 mt-1">
+              Scan to verify transaction
+            </p>
+          </div>
+        )}
+
+        {/* Footer */}
+        <div className="text-center mt-4 text-xs text-gray-400">
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={() => handleShare("png")}
+              className="flex-1 py-2 bg-blue-900 text-white text-sm font-medium rounded-lg hover:bg-black hover:cursor-pointer transition"
+            >
+              Share as Image
+            </button>
+
+            <button
+              onClick={() => handleShare("pdf")}
+              className="flex-1 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 hover:cursor-pointer transition"
+            >
+              Share as PDF
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default TransactionReceipt;
+const Row = ({ label, value }) => (
+  <div className="flex justify-between gap-4">
+    <span className="text-gray-500">{label}</span>
+    <span className="text-right font-medium break-all">
+      {value || "N/A"}
+    </span>
+  </div>
+);
+
+export default TransactionReceiptModal;

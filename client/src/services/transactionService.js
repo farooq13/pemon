@@ -1,8 +1,9 @@
 import api from './api';
 
 const transactionService = {
-  /*
-   * Get paginated transaction list with filters
+  /**
+   * Get transaction history with filters and pagination
+   * Note: This might be called getTransactions OR getTransactionHistory
    */
   async getTransactions(params = {}) {
     try {
@@ -14,100 +15,70 @@ const transactionService = {
     }
   },
 
-  /*
-   * Get single transaction details
+  // Alias for compatibility
+  async getTransactionHistory(params = {}) {
+    return this.getTransactions(params);
+  },
+
+  /**
+   * Get detailed information about a specific transaction
+   * THIS IS THE KEY METHOD THAT WAS MISSING!
    */
   async getTransactionDetail(transactionId) {
     try {
+      console.log('🔍 Fetching transaction detail for ID:', transactionId);
       const response = await api.get(`/transactions/${transactionId}/`);
-      return response.data;
+      console.log('📦 Response:', response.data);
+      
+      // Handle different response formats
+      const data = response.data.data || response.data;
+      console.log('✓ Parsed transaction data:', data);
+      
+      return data;
     } catch (error) {
-      console.error('Failed to fetch transaction details:', error);
+      console.error('❌ Failed to fetch transaction detail:', error);
       throw error;
     }
   },
 
-  /*
-   * Get transaction statistics
-   */
-  async getTransactionStats(period = '30d') {
-    try {
-      const response = await api.get('/transactions/stats/', {
-        params: { period }
-      });
-      return response.data.data;
-    } catch (error) {
-      console.error('Failed to fetch transaction stats:', error);
-      throw error;
-    }
-  },
-
-  /*
-   * Get transaction summary
-   */
-  async getTransactionSummary() {
-    try {
-      const response = await api.get('/transactions/summary/');
-      return response.data.data;
-    } catch (error) {
-      console.error('Failed to fetch transaction summary:', error);
-      throw error;
-    }
-  },
-
-  /*
-   * Download transaction receipt
+  /**
+   * Download transaction receipt as PDF
    */
   async downloadReceipt(transactionId, format = 'pdf') {
     try {
-      const response = await api.get(
-        `/transactions/${transactionId}/receipt/`,
-        {
-          params: { format },
-          responseType: format === 'pdf' ? 'blob' : 'text'
-        }
-      );
+      const response = await api.get(`/transactions/${transactionId}/receipt/`, {
+        params: { format },
+        responseType: 'blob'
+      });
 
-      if (format === 'pdf') {
-        // Create download link for PDF
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', `receipt_${transactionId}.pdf`);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
-      } else {
-        // Open HTML in new window
-        const newWindow = window.open();
-        newWindow.document.write(response.data);
-        newWindow.document.close();
-      }
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `receipt-${transactionId}.${format}`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Failed to download receipt:', error);
       throw error;
     }
   },
 
-  /*
+  /**
    * Export transactions to CSV
    */
-  async exportTransactions(params = {}) {
+  async exportToCSV(filters = {}) {
     try {
       const response = await api.get('/transactions/export/', {
-        params,
+        params: { ...filters, format: 'csv' },
         responseType: 'blob'
       });
 
-      // Create download link
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      
-      const filename = `transactions_${new Date().toISOString().split('T')[0]}.csv`;
-      link.setAttribute('download', filename);
-      
+      link.setAttribute('download', `transactions-${Date.now()}.csv`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -118,65 +89,22 @@ const transactionService = {
     }
   },
 
-  /*
-   * Format transaction type for display
+  /**
+   * Get formatted label for transaction type
    */
   getTypeLabel(type) {
-    const labels = {
-      'DEPOSIT': 'Deposit',
-      'WITHDRAWAL': 'Withdrawal',
-      'TRANSFER': 'Transfer',
-      'BILL_PAYMENT': 'Bill Payment',
-      'AIRTIME': 'Airtime',
-      'DATA': 'Data',
-      'ELECTRICITY': 'Electricity',
-      'CABLE_TV': 'Cable TV',
-      'REVERSAL': 'Reversal',
-      'REFUND': 'Refund',
-      'COMMISSION': 'Commission',
-      'CHARGE': 'Charge',
-    };
-    
-    return labels[type] || type;
+    if (!type) return 'Unknown';
+    return type
+      .toString()
+      .replace(/_/g, ' ')
+      .trim()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
   },
 
-  /*
-   * Get status color
-   */
-  getStatusColor(status) {
-    const colors = {
-      'COMPLETED': {
-        bg: 'bg-green-100',
-        text: 'text-green-800',
-        border: 'border-green-200'
-      },
-      'PENDING': {
-        bg: 'bg-yellow-100',
-        text: 'text-yellow-800',
-        border: 'border-yellow-200'
-      },
-      'PROCESSING': {
-        bg: 'bg-blue-100',
-        text: 'text-blue-800',
-        border: 'border-blue-200'
-      },
-      'FAILED': {
-        bg: 'bg-red-100',
-        text: 'text-red-800',
-        border: 'border-red-200'
-      },
-      'REVERSED': {
-        bg: 'bg-gray-100',
-        text: 'text-gray-800',
-        border: 'border-gray-200'
-      }
-    };
-    
-    return colors[status] || colors['PENDING'];
-  },
-
-  /*
-   * Format currency
+  /**
+   * Format currency for display
    */
   formatCurrency(amount) {
     const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -191,17 +119,20 @@ const transactionService = {
     })}`;
   },
 
-  /*
-   * Get transaction direction (debit/credit) for user
+  /**
+   * Format date for display
    */
-  getTransactionDirection(transaction, userId) {
-    // If user is sender, it's a debit
-    if (transaction.user_email === userId || transaction.is_debit === true) {
-      return 'debit';
-    }
+  formatDate(dateString) {
+    if (!dateString) return '';
     
-    // If user is recipient, it's a credit
-    return 'credit';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   }
 };
 

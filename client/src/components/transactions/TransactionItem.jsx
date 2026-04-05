@@ -1,7 +1,10 @@
-import { ArrowUpRight, ArrowDownLeft, Clock } from 'lucide-react';
-import transactionService from '../../services/transactionService';
+import { ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 
-
+/**
+ * TransactionItem Component - FIXED
+ * 
+ * Now correctly passes transaction object (not event) to onClick
+ */
 const TransactionItem = ({ transaction, onClick, currentUserEmail }) => {
   const isDebit = transaction.is_debit;
   
@@ -17,10 +20,16 @@ const TransactionItem = ({ transaction, onClick, currentUserEmail }) => {
     PROCESSING: 'bg-blue-100 text-blue-800',
   };
 
+  // FIXED: Pass transaction to onClick, not event
+  const handleClick = () => {
+    console.log('TransactionItem clicked, calling onClick with:', transaction);
+    onClick(transaction);  // Pass the transaction object!
+  };
+
   return (
     <button
-      onClick={onClick}
-      className="w-full px-4 py-3.5 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
+      onClick={handleClick}  // Call our handler instead of onClick directly
+      className="w-full px-4 py-3.5 hover:bg-gray-50 hover:cursor-pointer active:bg-gray-100 transition-colors text-left"
     >
       <div className="flex items-center gap-3">
         {/* Icon */}
