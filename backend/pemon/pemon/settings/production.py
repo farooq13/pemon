@@ -1,28 +1,26 @@
 from .base import *
+frm .base import BASE_DIR
+import os
+import dj_database_url
 
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('DATABASE_NAME'),
-        'USER': config('DATABASE_USER'),
-        'PASSWORD': config('DATABASE_PASSWORD'),
-        'HOST': config('DATABASE_HOST', default='localhost'),
-        'PORT': config('DATABASE_PORT', default='5432'),
-        'ATOMIC_REQUESTS': True,  # Wrap each request in a transaction
-        'CONN_MAX_AGE': 600,  # Connection pooling (10 minutes)
-        'OPTIONS': {
-            'connect_timeout': 10,
-        },
-    }
+    'default': dj_database_url.config(
+        default=os.environ.get['DATABASE_URL'],
+        conn_max_age=600,
+        
+    )
 }
+
 
 
 # SECURITY SETTINGS
 
 DEBUG = False
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv())
+ALLOWED_HOSTS = [os.environ.get['RENDER_EXTERNAL_HOSTNAME']]
+CSR_TRUSTED_ORIGINS = ['https://'+os.environ.get['RENDER_EXTERNAL_HOSTNAME']]
+SECRET_KEY = os.environ.get['SECRET_KEY']
 
 # Session Security
 SESSION_COOKIE_SECURE = True
@@ -66,8 +64,14 @@ DATABASES['default']['OPTIONS'] = {
 # Use WhiteNoise for static file serving
 MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
+STORAGES = [
+    "default": {
+        "BACKEND": "django.core.files.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+]
 
 
 # EMAIL - Production
@@ -155,4 +159,4 @@ REST_FRAMEWORK['DEFAULT_THROTTLE_RATES'] = {
 
 # CORS - Production (Restrict origins)
 CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=Csv())
+# CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', cast=Csv())

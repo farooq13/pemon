@@ -79,7 +79,8 @@ def readiness_check(request):
 # URL PATTERNS
 urlpatterns = [
     # ADMIN INTERFACE
-    path('admin/', admin.site.urls),
+    path('admin/', include('admin_honeypot.urls', namespace='admin_honeypot')),
+    path('pemonadmin/', admin.site.urls),
     
     # HEALTH CHECK ENDPOINTS
     path('health/', health_check, name='health-check'),
@@ -119,3 +120,8 @@ if settings.DEBUG:
         ] + urlpatterns
     except ImportError:
         pass
+
+
+
+
+

@@ -11,6 +11,7 @@ import os
 
 from django.core.wsgi import get_wsgi_application
 
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "pemon.settings")
+settings_module = 'pemon.settings.deployment' if 'RENDER_EXTERNAL_HOSTNAME' in os.environ else 'pemon.settings.development'
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", settings_module)
 
 application = get_wsgi_application()
