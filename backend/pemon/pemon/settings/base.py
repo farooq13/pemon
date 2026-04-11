@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django_celery_beat',
     'django_celery_results',
     'drf_spectacular',
+    'admin_honeypot',
 
     # Local
     'core',
@@ -141,8 +142,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+STATIC_ROOT = BASE_DIR/'staticfiles'
+STATICFILES_DIRS = [BASE_DIR/'static']
 
 #Media files (User uploads)
 MEDIA_URL = config('MEDIA_URL', default='/media/')
@@ -421,3 +422,6 @@ SMS_API_KEY = config('SMS_API_KEY', default='')
 
 # Monitoring
 SENTRY_DSN = config('SENTRY_DSN', default='')
+
+
+ACCOUNT_USERNAME_BLACKLIST = ["admin", 'pemonadmin', 'health', 'ready']
