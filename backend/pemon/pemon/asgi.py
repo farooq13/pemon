@@ -14,7 +14,7 @@ from channels.routing import ProtocolTypeRouter, URLRouter
 from core.routing import websocket_urlpatterns
 
 
-settings_module = 'pemon.settings.deployment' if 'RENDER_EXTERNAL_HOSTNAME' in os.environ else 'pemon.settings.development'
+settings_module = 'pemon.settings.production' if 'RENDER_EXTERNAL_HOSTNAME' in os.environ else 'pemon.settings.development'
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", settings_module)
 
 django_asgi_app = get_asgi_application()
